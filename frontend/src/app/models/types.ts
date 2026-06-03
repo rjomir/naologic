@@ -7,6 +7,11 @@ export type {
   ReflowResponse,
   CreateWorkOrderDto,
   UpdateWorkOrderDto,
+  SseEventType,
+  WorkOrderCreatedEvent,
+  WorkOrderUpdatedEvent,
+  WorkOrderDeletedEvent,
+  WorkOrderReflowEvent,
 } from '@naologic/shared';
 
 // ── UI-only types (not shared with backend) ─────────────────────────────────

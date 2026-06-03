@@ -4,12 +4,15 @@ import type { IWorkOrderRepository } from '../work-orders/work-order.repository.
 import type { IManufacturingOrderRepository } from '../manufacturing-orders/manufacturing-order.repository.js';
 import type { ReflowService } from './reflow.service.js';
 import type { WorkOrder, WorkCenter, ManufacturingOrder } from '../types.js';
+import type { SseService } from '../sse/sse.service.js';
+import { toDoc } from '../work-orders/work-order.service.js';
 
 export function createReflowRouter(
   wcRepo: IWorkCenterRepository,
   woRepo: IWorkOrderRepository,
   moRepo: IManufacturingOrderRepository,
   algorithm: ReflowService,
+  sse: SseService,
 ): Router {
   const router = Router();
 
@@ -75,6 +78,21 @@ export function createReflowRouter(
             endDate: new Date(c.newEndDate),
           })),
         );
+
+        // Broadcast only the rescheduled orders (minimal payload)
+        const changedDocIds = new Set(result.changes.map(c => c.docId));
+        const updates = woRows
+          .filter(wo => changedDocIds.has(wo.docId))
+          .map(wo => {
+            const change = result.changes.find(c => c.docId === wo.docId)!;
+            return toDoc({
+              ...wo,
+              startDate: new Date(change.newStartDate),
+              endDate: new Date(change.newEndDate),
+            });
+          });
+
+        sse.broadcast('work-order:reflow', { updates });
       }
 
       res.json({

@@ -1,17 +1,24 @@
-import { Injectable, signal, inject } from '@angular/core';
+import { Injectable, signal, inject, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { firstValueFrom } from 'rxjs';
 import type {
   WorkCenterDocument,
   WorkOrderDocument,
   CreateWorkOrderDto,
   UpdateWorkOrderDto,
+  WorkOrderCreatedEvent,
+  WorkOrderUpdatedEvent,
+  WorkOrderDeletedEvent,
+  WorkOrderReflowEvent,
 } from '../models/types';
 import { WorkOrderApiService } from './work-order-api.service';
 import { ScheduleValidatorService } from './schedule-validator.service';
+import { SseService } from './sse.service';
 
 /**
- * State facade — owns signals, delegates HTTP to WorkOrderApiService and
- * validation to ScheduleValidatorService. Components only ever inject this.
+ * State facade — owns signals, delegates HTTP to WorkOrderApiService,
+ * validation to ScheduleValidatorService, and live updates to SseService.
+ * Components only ever inject this class.
  */
 @Injectable({ providedIn: 'root' })
 export class WorkOrderService {
@@ -22,9 +29,12 @@ export class WorkOrderService {
 
   private readonly api = inject(WorkOrderApiService);
   private readonly validator = inject(ScheduleValidatorService);
+  private readonly sse = inject(SseService);
+  private readonly destroyRef = inject(DestroyRef);
 
   constructor() {
     void this.loadAll();
+    this.subscribeToRealTimeUpdates();
   }
 
   private async loadAll(): Promise<void> {
@@ -42,6 +52,48 @@ export class WorkOrderService {
     } finally {
       this.loading.set(false);
     }
+  }
+
+  private subscribeToRealTimeUpdates(): void {
+    // Another user created an order
+    this.sse
+      .listen<WorkOrderCreatedEvent>('work-order:created')
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(({ workOrder }) => {
+        this.workOrders.update(orders => {
+          if (orders.some(o => o.docId === workOrder.docId)) return orders; // own action already applied
+          return [...orders, workOrder].sort((a, b) =>
+            a.data.startDate.localeCompare(b.data.startDate),
+          );
+        });
+      });
+
+    // Another user updated an order
+    this.sse
+      .listen<WorkOrderUpdatedEvent>('work-order:updated')
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(({ workOrder }) => {
+        this.workOrders.update(orders =>
+          orders.map(o => (o.docId === workOrder.docId ? workOrder : o)),
+        );
+      });
+
+    // Another user deleted an order
+    this.sse
+      .listen<WorkOrderDeletedEvent>('work-order:deleted')
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(({ docId }) => {
+        this.workOrders.update(orders => orders.filter(o => o.docId !== docId));
+      });
+
+    // Reflow ran — patch only the rescheduled orders
+    this.sse
+      .listen<WorkOrderReflowEvent>('work-order:reflow')
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(({ updates }) => {
+        const map = new Map(updates.map(wo => [wo.docId, wo]));
+        this.workOrders.update(orders => orders.map(o => map.get(o.docId) ?? o));
+      });
   }
 
   getOrdersForWorkCenter(workCenterId: string): WorkOrderDocument[] {

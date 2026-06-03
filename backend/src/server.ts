@@ -25,6 +25,9 @@ import { PrismaManufacturingOrderRepository } from './manufacturing-orders/manuf
 import { ReflowService } from './reflow/reflow.service.js';
 import { createReflowRouter } from './reflow/reflow.router.js';
 
+import { SseService } from './sse/sse.service.js';
+import { createSseRouter } from './sse/sse.router.js';
+
 // ── Composition root: wire dependencies ────────────────────────────────────
 
 const wcRepo = new PrismaWorkCenterRepository(prisma);
@@ -37,6 +40,7 @@ const woRepo = new PrismaWorkOrderRepository(prisma);
 const woService = new WorkOrderService(woRepo, moRepo);
 
 const reflowAlgorithm = new ReflowService();
+const sseService = new SseService();
 
 // ── Express app ─────────────────────────────────────────────────────────────
 
@@ -80,12 +84,13 @@ app.get('/api/health', (_req, res) => {
 });
 
 app.use('/api/work-centers', createWorkCentersRouter(wcService));
-app.use('/api/work-orders', createWorkOrdersRouter(woService));
+app.use('/api/work-orders', createWorkOrdersRouter(woService, sseService));
 app.use(
   '/api/reflow',
   reflowRateLimit,
-  createReflowRouter(wcRepo, woRepo, moRepo, reflowAlgorithm),
+  createReflowRouter(wcRepo, woRepo, moRepo, reflowAlgorithm, sseService),
 );
+app.use('/api/events', createSseRouter(sseService));
 
 // ── Global error handler (must be last) ─────────────────────────────────────
 app.use(errorHandler);
