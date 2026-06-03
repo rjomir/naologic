@@ -56,18 +56,23 @@ export function anchorZoom(viewport: ViewportMs, deltaMs: number, anchorRatio: n
 /**
  * Convert a pixel X position (relative to the content area, scroll-adjusted)
  * to a Unix ms timestamp within the viewport.
+ * Ratio is clamped to [0, 1] so clicks outside the rendered area never produce
+ * a timestamp beyond the viewport bounds.
  */
 export function pxToMs(
   scrollAdjustedX: number,
   containerWidthPx: number,
   viewport: ViewportMs,
 ): number {
-  const ratio = scrollAdjustedX / containerWidthPx;
+  if (containerWidthPx <= 0) return viewport.from;
+  const ratio = Math.max(0, Math.min(1, scrollAdjustedX / containerWidthPx));
   return viewport.from + ratio * (viewport.to - viewport.from);
 }
 
 /**
  * Convert a Unix ms timestamp to a pixel X position within the content area.
+ * Result is clamped to [0, containerWidthPx] so timestamps outside the viewport
+ * never produce a negative or overflow position.
  */
 export function msToRelativePx(
   timestampMs: number,
@@ -76,5 +81,6 @@ export function msToRelativePx(
 ): number {
   const duration = viewport.to - viewport.from;
   if (duration <= 0) return 0;
-  return ((timestampMs - viewport.from) / duration) * containerWidthPx;
+  const px = ((timestampMs - viewport.from) / duration) * containerWidthPx;
+  return Math.max(0, Math.min(containerWidthPx, px));
 }

@@ -15,7 +15,7 @@ import { WorkOrderService } from '../services/work-order.service';
 import { WorkOrderBarComponent } from './work-order-bar/work-order-bar.component';
 import { WorkOrderPanelComponent } from './work-order-panel/work-order-panel.component';
 import { computeNotches, type TimelineNotch } from './utils/compute-notches';
-import { anchorZoom } from './utils/viewport.utils';
+import { anchorZoom, pxToMs } from './utils/viewport.utils';
 import { getBarSize, type BarSize } from './utils/activity-size.model';
 import type { PanelMode, WorkOrderDocument, TimelineColumn } from '../models/types';
 
@@ -156,7 +156,11 @@ export class TimelineComponent implements AfterViewInit {
   }
 
   private pxToDate(px: number): Date {
-    return new Date(this.timelineStart.getTime() + (px / this.pixelsPerDay()) * 86_400_000);
+    const ms = pxToMs(px, this.totalWidth(), {
+      from: this.timelineStart.getTime(),
+      to: this.timelineStart.getTime() + TOTAL_DAYS * 86_400_000,
+    });
+    return new Date(ms);
   }
 
   getBarStyle(wo: WorkOrderDocument): Record<string, string> {
