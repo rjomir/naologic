@@ -6,7 +6,9 @@ import {
   OnChanges,
   SimpleChanges,
   ChangeDetectionStrategy,
+  HostListener,
   inject,
+  signal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
@@ -64,6 +66,12 @@ export class WorkOrderPanelComponent implements OnChanges {
 
   readonly statusOptions = STATUS_OPTIONS;
   overlapError = '';
+  saving = signal(false);
+
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    this.onCancel();
+  }
 
   private readonly fb = inject(FormBuilder);
   private readonly woService = inject(WorkOrderService);
@@ -138,6 +146,7 @@ export class WorkOrderPanelComponent implements OnChanges {
     }
 
     this.overlapError = '';
+    this.saving.set(true);
 
     try {
       if (this.mode === 'edit' && this.editTarget) {
@@ -162,6 +171,8 @@ export class WorkOrderPanelComponent implements OnChanges {
       this.saved.emit();
     } catch {
       this.overlapError = 'Failed to save. Please try again.';
+    } finally {
+      this.saving.set(false);
     }
   }
 

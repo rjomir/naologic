@@ -115,8 +115,8 @@
 
     <div class="panel__footer">
       <button type="button" class="btn btn--ghost" (click)="onCancel()">Cancel</button>
-      <button type="submit" class="btn btn--primary" [disabled]="saving">
-        {{ saving ? 'Saving…' : submitLabel }}
+      <button type="submit" class="btn btn--primary" [disabled]="saving()">
+        {{ saving() ? 'Saving…' : submitLabel }}
       </button>
     </div>
   </form>
