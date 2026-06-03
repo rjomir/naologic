@@ -1,0 +1,60 @@
+import {
+  Component,
+  Input,
+  Output,
+  EventEmitter,
+  HostListener,
+  ElementRef,
+  ChangeDetectionStrategy,
+  signal,
+} from '@angular/core';
+import { CommonModule } from '@angular/common';
+import type { WorkOrderDocument } from '../../models/types';
+
+@Component({
+  selector: 'app-work-order-bar',
+  standalone: true,
+  imports: [CommonModule],
+  templateUrl: './work-order-bar.component.html',
+  styleUrl: './work-order-bar.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class WorkOrderBarComponent {
+  @Input({ required: true }) workOrder!: WorkOrderDocument;
+  @Output() editOrder = new EventEmitter<WorkOrderDocument>();
+  @Output() deleteOrder = new EventEmitter<string>();
+
+  menuOpen = signal(false);
+
+  toggleMenu(event: MouseEvent): void {
+    event.stopPropagation();
+    this.menuOpen.update(v => !v);
+  }
+
+  onEdit(event: MouseEvent): void {
+    event.stopPropagation();
+    this.menuOpen.set(false);
+    this.editOrder.emit(this.workOrder);
+  }
+
+  onDelete(event: MouseEvent): void {
+    event.stopPropagation();
+    this.menuOpen.set(false);
+    this.deleteOrder.emit(this.workOrder.docId);
+  }
+
+  @HostListener('document:click')
+  closeMenu(): void {
+    this.menuOpen.set(false);
+  }
+
+  get statusLabel(): string {
+    const labels: Record<string, string> = {
+      open: 'Open',
+      'in-progress': 'In Progress',
+      complete: 'Complete',
+      blocked: 'Blocked',
+    };
+    return labels[this.workOrder.data.status] ?? this.workOrder.data.status;
+  }
+}

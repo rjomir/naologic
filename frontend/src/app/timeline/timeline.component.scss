@@ -1,0 +1,281 @@
+.timeline-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: #f9fafb;
+}
+
+// ── Banners ────────────────────────────────────────────────────────────────
+
+.banner {
+  padding: 10px 24px;
+  font-size: 13px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+
+  &--info {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border-bottom: 1px solid #bfdbfe;
+  }
+  &--error {
+    background: #fef2f2;
+    color: #dc2626;
+    border-bottom: 1px solid #fecaca;
+  }
+  &--success {
+    background: #ecfdf5;
+    color: #065f46;
+    border-bottom: 1px solid #a7f3d0;
+    cursor: pointer;
+  }
+}
+
+.banner__close-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  opacity: 0.6;
+  font-size: 12px;
+  margin-left: 12px;
+  color: inherit;
+  padding: 0;
+  &:hover {
+    opacity: 1;
+  }
+}
+
+// ── Toolbar ────────────────────────────────────────────────────────────────
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  height: 56px;
+  background: #fff;
+  border-bottom: 1px solid #e5e7eb;
+  flex-shrink: 0;
+}
+
+.toolbar__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.toolbar__right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.today-btn {
+  height: 32px;
+  padding: 0 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  color: #374151;
+  cursor: pointer;
+
+  &:hover {
+    background: #f3f4f6;
+  }
+}
+
+.zoom-label {
+  font-size: 13px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.reflow-btn {
+  height: 32px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 6px;
+  background: #111827;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: #374151;
+  }
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+}
+
+.zoom-select-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.zoom-select {
+  width: 110px;
+
+  ::ng-deep .ng-select-container {
+    min-height: 32px;
+    height: 32px;
+  }
+
+  ::ng-deep .ng-value-container {
+    padding-top: 0;
+  }
+}
+
+// ── Timeline scroll area ────────────────────────────────────────────────────
+
+.timeline-scroll {
+  flex: 1;
+  overflow: auto;
+  position: relative;
+}
+
+.timeline-inner {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+// ── Header ─────────────────────────────────────────────────────────────────
+
+.timeline-header {
+  display: flex;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: #fff;
+  border-bottom: 2px solid #e5e7eb;
+  height: 40px;
+}
+
+.left-col {
+  width: 220px;
+  min-width: 220px;
+  flex-shrink: 0;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  position: sticky;
+  left: 0;
+  background: #fff;
+  z-index: 5;
+  border-right: 1px solid #e5e7eb;
+
+  &--header {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: #9ca3af;
+  }
+}
+
+.wc-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.grid-area {
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+
+  &--header {
+    align-items: center;
+    overflow: hidden;
+  }
+}
+
+// ── Adaptive notch labels (compute-notches) ────────────────────────────────
+
+.notch-label {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7280;
+  border-right: 1px solid #e5e7eb;
+  white-space: nowrap;
+  overflow: hidden;
+  user-select: none;
+  pointer-events: none;
+}
+
+// ── Row ───────────────────────────────────────────────────────────────────
+
+.timeline-row {
+  display: flex;
+  height: var(--row-height, 56px);
+  border-bottom: 1px solid #e5e7eb;
+  cursor: crosshair;
+  transition: background 0.1s;
+
+  .left-col {
+    background: #fff;
+    cursor: default;
+  }
+
+  &--hovered {
+    .left-col {
+      background: var(--row-hover-bg, #f3f4f6);
+    }
+    .col-line {
+      background: var(--row-hover-bg, #f3f4f6);
+    }
+  }
+}
+
+// ── Column grid lines (inside rows) ────────────────────────────────────────
+
+.col-line {
+  flex-shrink: 0;
+  height: 100%;
+  border-right: 1px solid #e5e7eb;
+  background: transparent;
+}
+
+// ── Today indicator ────────────────────────────────────────────────────────
+
+.today-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #3b82f6;
+  pointer-events: none;
+  z-index: 2;
+
+  &::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -3px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #3b82f6;
+  }
+}

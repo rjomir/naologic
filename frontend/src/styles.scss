@@ -1,0 +1,63 @@
+@use "@ng-select/ng-select/themes/default.theme.css";
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family:
+    "Circular-Std",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  font-size: 14px;
+  color: #111827;
+  background: #f9fafb;
+}
+
+:root {
+  --color-open: #3b82f6;
+  --color-in-progress: #7c3aed;
+  --color-complete: #059669;
+  --color-blocked: #d97706;
+
+  --color-open-bg: #eff6ff;
+  --color-in-progress-bg: #f5f3ff;
+  --color-complete-bg: #ecfdf5;
+  --color-blocked-bg: #fffbeb;
+
+  --left-col-width: 220px;
+  --row-height: 56px;
+  --border-color: #e5e7eb;
+  --header-bg: #ffffff;
+  --row-hover-bg: #f3f4f6;
+}
+
+/* ng-select override */
+.ng-select .ng-select-container {
+  border-color: #d1d5db;
+  border-radius: 6px;
+  min-height: 36px;
+  font-family: inherit;
+  font-size: 13px;
+}
+
+.ng-select.ng-select-focused .ng-select-container {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+/* ngb-datepicker light override */
+ngb-datepicker {
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  font-family: inherit;
+  font-size: 13px;
+}

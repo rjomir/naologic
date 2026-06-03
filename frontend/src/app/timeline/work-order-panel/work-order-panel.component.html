@@ -1,0 +1,123 @@
+<div
+  class="panel-backdrop"
+  (click)="onCancel()"
+  (keydown.escape)="onCancel()"
+  role="button"
+  tabindex="-1"
+  aria-label="Close panel"
+></div>
+
+<aside class="panel" role="dialog" [attr.aria-label]="title">
+  <div class="panel__header">
+    <h2 class="panel__title">{{ title }}</h2>
+    <button class="panel__close" (click)="onCancel()" aria-label="Close">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="2" y1="2" x2="14" y2="14" />
+        <line x1="14" y1="2" x2="2" y2="14" />
+      </svg>
+    </button>
+  </div>
+
+  <form class="panel__body" [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
+    <div class="field">
+      <label class="field__label" for="wo-name">Work Order Name <span class="required">*</span></label>
+      <input
+        id="wo-name"
+        class="field__input"
+        [class.field__input--error]="hasError('name', 'required')"
+        type="text"
+        formControlName="name"
+        placeholder="e.g. Pipe Batch #A3"
+        autocomplete="off"
+      />
+      @if (hasError('name', 'required')) {
+        <span class="field__error">Name is required</span>
+      }
+    </div>
+
+    <div class="field">
+      <label class="field__label" for="wo-status">Status <span class="required">*</span></label>
+      <ng-select
+        inputId="wo-status"
+        formControlName="status"
+        [items]="statusOptions"
+        bindValue="value"
+        bindLabel="label"
+        [clearable]="false"
+        [searchable]="false"
+        placeholder="Select status"
+      ></ng-select>
+    </div>
+
+    <div class="field">
+      <label class="field__label" for="start-dp-input">Start Date <span class="required">*</span></label>
+      <div class="date-input-wrap">
+        <input
+          id="start-dp-input"
+          class="field__input"
+          [class.field__input--error]="hasError('startDate', 'required')"
+          placeholder="YYYY-MM-DD"
+          formControlName="startDate"
+          ngbDatepicker
+          #startDp="ngbDatepicker"
+          (click)="startDp.open()"
+          readonly
+        />
+        <button type="button" class="date-toggle" (click)="startDp.toggle()">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5">
+            <rect x="1" y="2" width="12" height="11" rx="2" />
+            <line x1="4" y1="1" x2="4" y2="4" />
+            <line x1="10" y1="1" x2="10" y2="4" />
+            <line x1="1" y1="6" x2="13" y2="6" />
+          </svg>
+        </button>
+      </div>
+      @if (hasError('startDate', 'required')) {
+        <span class="field__error">Start date is required</span>
+      }
+    </div>
+
+    <div class="field">
+      <label class="field__label" for="end-dp-input">End Date <span class="required">*</span></label>
+      <div class="date-input-wrap">
+        <input
+          id="end-dp-input"
+          class="field__input"
+          [class.field__input--error]="hasError('endDate', 'required')"
+          placeholder="YYYY-MM-DD"
+          formControlName="endDate"
+          ngbDatepicker
+          #endDp="ngbDatepicker"
+          (click)="endDp.open()"
+          readonly
+        />
+        <button type="button" class="date-toggle" (click)="endDp.toggle()">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5">
+            <rect x="1" y="2" width="12" height="11" rx="2" />
+            <line x1="4" y1="1" x2="4" y2="4" />
+            <line x1="10" y1="1" x2="10" y2="4" />
+            <line x1="1" y1="6" x2="13" y2="6" />
+          </svg>
+        </button>
+      </div>
+      @if (hasError('endDate', 'required')) {
+        <span class="field__error">End date is required</span>
+      }
+    </div>
+
+    @if (groupError) {
+      <div class="alert alert--error">{{ groupError }}</div>
+    }
+
+    @if (overlapError) {
+      <div class="alert alert--error">{{ overlapError }}</div>
+    }
+
+    <div class="panel__footer">
+      <button type="button" class="btn btn--ghost" (click)="onCancel()">Cancel</button>
+      <button type="submit" class="btn btn--primary" [disabled]="saving">
+        {{ saving ? 'Saving…' : submitLabel }}
+      </button>
+    </div>
+  </form>
+</aside>

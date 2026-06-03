@@ -1,0 +1,99 @@
+<div class="timeline-wrapper">
+  @if (woService.loading()) {
+    <div class="banner banner--info">Loading data from API…</div>
+  }
+  @if (woService.apiError()) {
+    <div class="banner banner--error">{{ woService.apiError() }}</div>
+  }
+  @if (reflowResult()) {
+    <div class="banner banner--success" role="alert">
+      {{ reflowResult() }}
+      <button class="banner__close-btn" (click)="reflowResult.set(null)" aria-label="Dismiss">✕</button>
+    </div>
+  }
+
+  <div class="toolbar">
+    <h1 class="toolbar__title">Work Orders</h1>
+    <div class="toolbar__right">
+      <button class="today-btn" (click)="goToToday()">Today</button>
+      <button class="reflow-btn" (click)="onReflow()" [disabled]="reflowing()">
+        {{ reflowing() ? 'Reflowing…' : 'Run Reflow' }}
+      </button>
+      <div class="zoom-select-wrap">
+        <span class="zoom-label">Timescale:</span>
+        <ng-select
+          class="zoom-select"
+          [items]="zoomOptions"
+          bindValue="value"
+          bindLabel="label"
+          [(ngModel)]="zoomLevelValue"
+          [clearable]="false"
+          [searchable]="false"
+          (change)="onZoomChange($event.value)"
+        ></ng-select>
+      </div>
+    </div>
+  </div>
+
+  <div class="timeline-scroll" #scrollContainer (wheel)="onWheel($event)">
+    <div class="timeline-inner" [style.width.px]="totalWidth() + 220">
+      <div class="timeline-header">
+        <div class="left-col left-col--header"><span>Work Center</span></div>
+        <div class="grid-area grid-area--header" [style.width.px]="totalWidth()">
+          @for (notch of majorNotches(); track notch.key) {
+            <div class="notch-label" [style.left.px]="getNotchLeft(notch)" [style.width.px]="notch.widthPx">
+              {{ notch.label }}
+            </div>
+          }
+          @if (todayOffset() >= 0) {
+            <div class="today-line" [style.left.px]="todayOffset()"></div>
+          }
+        </div>
+      </div>
+
+      @for (wc of workCenters(); track wc.docId) {
+        <div
+          class="timeline-row"
+          role="row"
+          tabindex="0"
+          (click)="onRowClick($event, wc.docId)"
+          (keydown.enter)="onRowClick($event, wc.docId)"
+          (mouseenter)="hoveredRow = wc.docId"
+          (mouseleave)="hoveredRow = null"
+          [class.timeline-row--hovered]="hoveredRow === wc.docId"
+        >
+          <div class="left-col">
+            <span class="wc-name">{{ wc.data.name }}</span>
+          </div>
+          <div class="grid-area" [style.width.px]="totalWidth()">
+            @for (col of columns(); track col.key) {
+              <div class="col-line" [style.width.px]="pixelsPerDay()"></div>
+            }
+            @if (todayOffset() >= 0) {
+              <div class="today-line" [style.left.px]="todayOffset()"></div>
+            }
+            @for (wo of getOrdersForWc(wc.docId); track wo.docId) {
+              <app-work-order-bar
+                [workOrder]="wo"
+                [style]="getBarStyle(wo)"
+                (editOrder)="onEditOrder($event)"
+                (deleteOrder)="onDeleteOrder($event)"
+              ></app-work-order-bar>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+</div>
+
+@if (panelVisible()) {
+  <app-work-order-panel
+    [mode]="panelMode()"
+    [workCenterId]="panelWorkCenterId()"
+    [prefillStartDate]="panelPrefillDate()"
+    [editTarget]="panelEditTarget()"
+    (closed)="closePanel()"
+    (saved)="onPanelSaved()"
+  ></app-work-order-panel>
+}
