@@ -1,15 +1,18 @@
 import { Injectable, signal, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import type {
   WorkCenterDocument,
   WorkOrderDocument,
   CreateWorkOrderDto,
   UpdateWorkOrderDto,
-  ReflowResponse,
 } from '../models/types';
-import { API_URL } from '../tokens/api-url.token';
+import { WorkOrderApiService } from './work-order-api.service';
+import { ScheduleValidatorService } from './schedule-validator.service';
 
+/**
+ * State facade — owns signals, delegates HTTP to WorkOrderApiService and
+ * validation to ScheduleValidatorService. Components only ever inject this.
+ */
 @Injectable({ providedIn: 'root' })
 export class WorkOrderService {
   readonly workCenters = signal<WorkCenterDocument[]>([]);
@@ -17,8 +20,8 @@ export class WorkOrderService {
   readonly loading = signal(false);
   readonly apiError = signal<string | null>(null);
 
-  private readonly http = inject(HttpClient);
-  private readonly apiUrl = inject(API_URL);
+  private readonly api = inject(WorkOrderApiService);
+  private readonly validator = inject(ScheduleValidatorService);
 
   constructor() {
     void this.loadAll();
@@ -29,8 +32,8 @@ export class WorkOrderService {
     this.apiError.set(null);
     try {
       const [wcs, wos] = await Promise.all([
-        firstValueFrom(this.http.get<WorkCenterDocument[]>(`${this.apiUrl}/work-centers`)),
-        firstValueFrom(this.http.get<WorkOrderDocument[]>(`${this.apiUrl}/work-orders`)),
+        firstValueFrom(this.api.getWorkCenters()),
+        firstValueFrom(this.api.getWorkOrders()),
       ]);
       this.workCenters.set(wcs);
       this.workOrders.set(wos);
@@ -51,42 +54,34 @@ export class WorkOrderService {
     workCenterId: string,
     excludeId?: string,
   ): string | null {
-    const start = new Date(startDate).getTime();
-    const end = new Date(endDate).getTime();
-    for (const wo of this.getOrdersForWorkCenter(workCenterId)) {
-      if (wo.docId === excludeId) continue;
-      const wStart = new Date(wo.data.startDate).getTime();
-      const wEnd = new Date(wo.data.endDate).getTime();
-      if (start < wEnd && end > wStart) return `Overlaps with "${wo.data.name}"`;
-    }
-    return null;
+    return this.validator.checkOverlap(
+      this.workOrders(),
+      startDate,
+      endDate,
+      workCenterId,
+      excludeId,
+    );
   }
 
   async create(dto: CreateWorkOrderDto): Promise<void> {
-    const created = await firstValueFrom(
-      this.http.post<WorkOrderDocument>(`${this.apiUrl}/work-orders`, dto),
-    );
+    const created = await firstValueFrom(this.api.createWorkOrder(dto));
     this.workOrders.update(orders => [...orders, created]);
   }
 
   async update(docId: string, dto: UpdateWorkOrderDto): Promise<void> {
-    const updated = await firstValueFrom(
-      this.http.put<WorkOrderDocument>(`${this.apiUrl}/work-orders/${docId}`, dto),
-    );
+    const updated = await firstValueFrom(this.api.updateWorkOrder(docId, dto));
     this.workOrders.update(orders => orders.map(wo => (wo.docId === docId ? updated : wo)));
   }
 
   async delete(docId: string): Promise<void> {
-    await firstValueFrom(this.http.delete<void>(`${this.apiUrl}/work-orders/${docId}`));
+    await firstValueFrom(this.api.deleteWorkOrder(docId));
     this.workOrders.update(orders => orders.filter(wo => wo.docId !== docId));
   }
 
   async runReflow(): Promise<{ updatedCount: number }> {
-    const data = await firstValueFrom(this.http.post<ReflowResponse>(`${this.apiUrl}/reflow`, {}));
+    const data = await firstValueFrom(this.api.runReflow());
     if (data.updatedCount > 0) {
-      const wos = await firstValueFrom(
-        this.http.get<WorkOrderDocument[]>(`${this.apiUrl}/work-orders`),
-      );
+      const wos = await firstValueFrom(this.api.getWorkOrders());
       this.workOrders.set(wos);
     }
     return { updatedCount: data.updatedCount };
