@@ -1,0 +1,43 @@
+{
+  "name": "naologic",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "pnpm@10.17.0",
+  "scripts": {
+    "prepare": "husky",
+    "dev": "pnpm --filter timeline-frontend start",
+    "be": "pnpm --filter production-reflow start",
+    "be:test": "pnpm --filter production-reflow test",
+    "lint": "pnpm -r run lint",
+    "lint:fix": "pnpm -r run lint:fix",
+    "format": "prettier --write \"**/*.{ts,html,scss,css,json,md,yml,yaml}\"",
+    "format:check": "prettier --check \"**/*.{ts,html,scss,css,json,md,yml,yaml}\""
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.5.2",
+    "prettier": "^3.5.3"
+  },
+  "lint-staged": {
+    "frontend/src/**/*.{ts,html,scss}": [
+      "prettier --write"
+    ],
+    "backend/src/**/*.ts": [
+      "prettier --write"
+    ],
+    "*.{json,md,yml,yaml}": [
+      "prettier --write"
+    ]
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@parcel/watcher",
+      "esbuild",
+      "lmdb",
+      "msgpackr-extract",
+      "better-sqlite3"
+    ]
+  }
+}

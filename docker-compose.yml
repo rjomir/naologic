@@ -1,0 +1,55 @@
+services:
+  # ── PostgreSQL ────────────────────────────────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    container_name: naologic-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: naologic
+      POSTGRES_PASSWORD: naologic
+      POSTGRES_DB: naologic
+    ports:
+      - '5432:5432'
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U naologic -d naologic']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── Backend API (Express + Prisma) ────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: naologic-backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://naologic:naologic@db:5432/naologic?schema=public
+      NODE_ENV: development
+      PORT: 3000
+    ports:
+      - '3000:3000'
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # ── Angular Frontend ──────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: naologic-frontend
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=development
+    ports:
+      - '4200:4200'
+    volumes:
+      - ./frontend/src:/app/src
+    depends_on:
+      - backend
+
+volumes:
+  pg_data:
