@@ -42,13 +42,15 @@ git commit -m "fix(reflow): handle circular dependency"
 
 ## Pre-commit hook
 
-`.husky/pre-commit` runs three things in order:
+`.husky/pre-commit` runs five things in order:
 
 1. `lint-staged` — Prettier auto-formats staged files
 2. `ng lint` — Angular ESLint on all frontend files (blocks on error)
 3. `eslint src` — TypeScript ESLint on all backend files (blocks on error)
+4. `tsc --noEmit` — TypeScript type check on frontend (blocks on error)
+5. `tsc --noEmit` — TypeScript type check on backend (blocks on error)
 
-Code must pass lint before a commit lands.
+Code must pass lint and type checks before a commit lands.
 
 ## Frontend architecture
 
