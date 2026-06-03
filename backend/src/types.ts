@@ -1,5 +1,3 @@
-export type WorkOrderStatus = 'open' | 'in-progress' | 'complete' | 'blocked';
-
 export interface Shift {
   dayOfWeek: number; // 0=Sunday, 1=Monday ... 6=Saturday
   startHour: number; // 0-23

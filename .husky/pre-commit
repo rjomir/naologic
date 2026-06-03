@@ -3,3 +3,4 @@ pnpm --filter timeline-frontend run lint
 pnpm --filter production-reflow run lint
 pnpm --filter timeline-frontend exec tsc --noEmit
 pnpm --filter production-reflow exec tsc --noEmit
+pnpm knip
