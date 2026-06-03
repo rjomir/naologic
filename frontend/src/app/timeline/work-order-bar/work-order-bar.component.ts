@@ -10,6 +10,7 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import type { WorkOrderDocument } from '../../models/types';
+import type { BarSize } from '../utils/activity-size.model';
 
 @Component({
   selector: 'app-work-order-bar',
@@ -21,6 +22,7 @@ import type { WorkOrderDocument } from '../../models/types';
 })
 export class WorkOrderBarComponent {
   @Input({ required: true }) workOrder!: WorkOrderDocument;
+  @Input() barSize: BarSize = 'md';
   @Output() editOrder = new EventEmitter<WorkOrderDocument>();
   @Output() deleteOrder = new EventEmitter<string>();
 

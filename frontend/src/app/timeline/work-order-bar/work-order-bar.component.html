@@ -1,21 +1,32 @@
-<div class="bar" [class]="'bar--' + workOrder.data.status">
-  <span class="bar__name">{{ workOrder.data.name }}</span>
-  <span class="bar__badge" [class]="'badge--' + workOrder.data.status">
-    {{ statusLabel }}
-  </span>
+<div
+  class="bar"
+  [class]="'bar--' + workOrder.data.status"
+  [class.bar--xs]="barSize === 'xs'"
+  [class.bar--sm]="barSize === 'sm'"
+  [title]="barSize === 'xs' ? workOrder.data.name : ''"
+>
+  @if (barSize !== 'xs') {
+    <span class="bar__name">{{ workOrder.data.name }}</span>
+  }
+  @if (barSize === 'md' || barSize === 'sm') {
+    <span class="bar__badge" [class]="'badge--' + workOrder.data.status">
+      {{ statusLabel }}
+    </span>
+  }
+  @if (barSize === 'md') {
+    <button class="bar__menu-btn" (click)="toggleMenu($event)" title="Actions">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
+        <circle cx="7" cy="2" r="1.4" />
+        <circle cx="7" cy="7" r="1.4" />
+        <circle cx="7" cy="12" r="1.4" />
+      </svg>
+    </button>
 
-  <button class="bar__menu-btn" (click)="toggleMenu($event)" title="Actions">
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
-      <circle cx="7" cy="2" r="1.4" />
-      <circle cx="7" cy="7" r="1.4" />
-      <circle cx="7" cy="12" r="1.4" />
-    </svg>
-  </button>
-
-  @if (menuOpen()) {
-    <div class="bar__dropdown">
-      <button class="dropdown-item" (click)="onEdit($event)">Edit</button>
-      <button class="dropdown-item dropdown-item--danger" (click)="onDelete($event)">Delete</button>
-    </div>
+    @if (menuOpen()) {
+      <div class="bar__dropdown">
+        <button class="dropdown-item" (click)="onEdit($event)">Edit</button>
+        <button class="dropdown-item dropdown-item--danger" (click)="onDelete($event)">Delete</button>
+      </div>
+    }
   }
 </div>

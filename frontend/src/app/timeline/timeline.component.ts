@@ -16,6 +16,7 @@ import { WorkOrderBarComponent } from './work-order-bar/work-order-bar.component
 import { WorkOrderPanelComponent } from './work-order-panel/work-order-panel.component';
 import { computeNotches, type TimelineNotch } from './utils/compute-notches';
 import { anchorZoom } from './utils/viewport.utils';
+import { getBarSize, type BarSize } from './utils/activity-size.model';
 import type { PanelMode, WorkOrderDocument, TimelineColumn } from '../models/types';
 
 const PX_PER_DAY_PRESETS = { day: 50, week: 20, month: 6 } as const;
@@ -167,6 +168,10 @@ export class TimelineComponent implements AfterViewInit {
       this.pixelsPerDay() * 0.5,
     );
     return { left: `${left}px`, width: `${width}px` };
+  }
+
+  getBarSizeFor(wo: WorkOrderDocument): BarSize {
+    return getBarSize(parseFloat(this.getBarStyle(wo)['width']), this.totalWidth());
   }
 
   getOrdersForWc(wcId: string): WorkOrderDocument[] {

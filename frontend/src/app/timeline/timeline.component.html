@@ -73,12 +73,15 @@
               <div class="today-line" [style.left.px]="todayOffset()"></div>
             }
             @for (wo of getOrdersForWc(wc.docId); track wo.docId) {
-              <app-work-order-bar
-                [workOrder]="wo"
-                [style]="getBarStyle(wo)"
-                (editOrder)="onEditOrder($event)"
-                (deleteOrder)="onDeleteOrder($event)"
-              ></app-work-order-bar>
+              @if (getBarSizeFor(wo) !== 'hidden') {
+                <app-work-order-bar
+                  [workOrder]="wo"
+                  [barSize]="getBarSizeFor(wo)"
+                  [style]="getBarStyle(wo)"
+                  (editOrder)="onEditOrder($event)"
+                  (deleteOrder)="onDeleteOrder($event)"
+                ></app-work-order-bar>
+              }
             }
           </div>
         </div>
