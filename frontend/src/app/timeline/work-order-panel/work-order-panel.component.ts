@@ -114,7 +114,7 @@ export class WorkOrderPanelComponent implements OnChanges {
     return d.toISOString().slice(0, 10);
   }
 
-  onSubmit(): void {
+  async onSubmit(): Promise<void> {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
@@ -139,27 +139,30 @@ export class WorkOrderPanelComponent implements OnChanges {
 
     this.overlapError = '';
 
-    if (this.mode === 'edit' && this.editTarget) {
-      this.woService.update(this.editTarget.docId, {
-        name,
-        status,
-        startDate: startIso,
-        endDate: endIso,
-      });
-    } else {
-      this.woService.create({
-        docType: 'workOrder',
-        data: {
+    try {
+      if (this.mode === 'edit' && this.editTarget) {
+        await this.woService.update(this.editTarget.docId, {
           name,
           status,
-          workCenterId: this.workCenterId,
           startDate: startIso,
           endDate: endIso,
-        },
-      });
+        });
+      } else {
+        await this.woService.create({
+          docType: 'workOrder',
+          data: {
+            name,
+            status,
+            workCenterId: this.workCenterId,
+            startDate: startIso,
+            endDate: endIso,
+          },
+        });
+      }
+      this.saved.emit();
+    } catch {
+      this.overlapError = 'Failed to save. Please try again.';
     }
-
-    this.saved.emit();
   }
 
   onCancel(): void {
