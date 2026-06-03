@@ -162,8 +162,10 @@ Git hooks will run automatically on `git commit` — Prettier formats staged fil
 # docker-compose.yml
 services:
   frontend: # ng serve --host 0.0.0.0 --poll 500
-    ports: '4200:4200'
-    volumes: ./frontend/src → /app/src # live reload
+    ports:
+      - '4200:4200'
+    volumes:
+      - ./frontend/src:/app/src # live reload
 
   backend: # pnpm start (runs once, then exits)
     restart: 'no'
