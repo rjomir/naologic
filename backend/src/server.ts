@@ -6,6 +6,8 @@ import prisma from './db.js';
 import { openApiSpec } from './swagger.js';
 import { requestLogger } from './middleware/logger.js';
 import { errorHandler } from './middleware/error-handler.js';
+import { securityHeaders } from './middleware/security.js';
+import { apiRateLimit, reflowRateLimit } from './middleware/rate-limit.js';
 
 import { createLruCache } from './cache/lru.cache.js';
 import type { WorkCenterDocument } from '@naologic/shared';
@@ -40,9 +42,17 @@ const reflowAlgorithm = new ReflowService();
 
 const app: Express = express();
 
-app.use(cors({ origin: '*' }));
-app.use(express.json());
+app.use(securityHeaders);
+app.use(
+  cors({
+    origin: process.env['ALLOWED_ORIGIN'] ?? 'http://localhost:4200',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type'],
+  }),
+);
+app.use(express.json({ limit: '1mb' }));
 app.use(requestLogger);
+app.use('/api', apiRateLimit);
 
 // ── Swagger UI (spec generated from Zod schemas) ────────────────────────────
 app.use(
@@ -71,7 +81,11 @@ app.get('/api/health', (_req, res) => {
 
 app.use('/api/work-centers', createWorkCentersRouter(wcService));
 app.use('/api/work-orders', createWorkOrdersRouter(woService));
-app.use('/api/reflow', createReflowRouter(wcRepo, woRepo, moRepo, reflowAlgorithm));
+app.use(
+  '/api/reflow',
+  reflowRateLimit,
+  createReflowRouter(wcRepo, woRepo, moRepo, reflowAlgorithm),
+);
 
 // ── Global error handler (must be last) ─────────────────────────────────────
 app.use(errorHandler);
