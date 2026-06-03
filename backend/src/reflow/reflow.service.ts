@@ -1,6 +1,6 @@
 import { DateTime } from 'luxon';
 import { calculateEndDate, snapToValidWorkTime } from '../utils/date-utils.js';
-import type { ReflowInput, ReflowResult, WorkOrder, WorkOrderChange } from '../types.js';
+import type { ReflowInput, ReflowResult, WorkOrder, WorkOrderChange, Shift } from '../types.js';
 
 // ---------------------------------------------------------------------------
 // Topological sort (Kahn's algorithm)
@@ -218,12 +218,61 @@ export class ReflowService {
       });
     }
 
+    const allUpdated = Array.from(updatedOrders.values());
+
+    // Optimization metrics
+    const totalDelayMinutes = changes.reduce((s, c) => s + Math.max(0, c.delayMinutes), 0);
+
+    const workCenterUtilization: Record<string, number> = {};
+    for (const wc of workCenters) {
+      const wcOrders = allUpdated.filter(wo => wo.data.workCenterId === wc.docId);
+      if (wcOrders.length === 0) continue;
+      const scheduledMin = wcOrders.reduce(
+        (s, wo) => s + wo.data.durationMinutes + (wo.data.setupTimeMinutes ?? 0),
+        0,
+      );
+      const earliest = DateTime.fromISO(wcOrders.map(wo => wo.data.startDate).sort()[0], {
+        zone: 'utc',
+      });
+      const latest = DateTime.fromISO(
+        wcOrders
+          .map(wo => wo.data.endDate)
+          .sort()
+          .at(-1)!,
+        { zone: 'utc' },
+      );
+      const available = availableMinutesInRange(earliest, latest, wc.data.shifts);
+      workCenterUtilization[wc.docId] = available > 0 ? Math.min(1, scheduledMin / available) : 0;
+    }
+
     return {
-      updatedWorkOrders: Array.from(updatedOrders.values()),
+      updatedWorkOrders: allUpdated,
       changes,
       explanation: buildExplanation(changes),
+      totalDelayMinutes,
+      workCenterUtilization,
     };
   }
+}
+
+function availableMinutesInRange(from: DateTime, to: DateTime, shifts: Shift[]): number {
+  let total = 0;
+  let day = from.startOf('day');
+  while (day <= to.startOf('day')) {
+    const specDay = day.weekday === 7 ? 0 : day.weekday;
+    const shift = shifts.find(s => s.dayOfWeek === specDay);
+    if (shift) {
+      const shiftStart = day.set({ hour: shift.startHour, minute: 0, second: 0, millisecond: 0 });
+      const shiftEnd = day.set({ hour: shift.endHour, minute: 0, second: 0, millisecond: 0 });
+      const effectiveStart = shiftStart > from ? shiftStart : from;
+      const effectiveEnd = shiftEnd < to ? shiftEnd : to;
+      if (effectiveEnd > effectiveStart) {
+        total += effectiveEnd.diff(effectiveStart, 'minutes').minutes;
+      }
+    }
+    day = day.plus({ days: 1 });
+  }
+  return total;
 }
 
 function buildExplanation(changes: WorkOrderChange[]): string {

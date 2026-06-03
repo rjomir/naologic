@@ -76,4 +76,8 @@ export interface ReflowResult {
   updatedWorkOrders: WorkOrder[];
   changes: WorkOrderChange[];
   explanation: string;
+  /** Sum of all positive delay minutes across rescheduled orders */
+  totalDelayMinutes: number;
+  /** Per-work-center ratio of scheduled working minutes to available shift minutes */
+  workCenterUtilization: Record<string, number>;
 }
