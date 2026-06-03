@@ -11,10 +11,9 @@ pnpm install
 ## Run
 
 ```bash
-pnpm start
+pnpm start        # start Express REST API on :3000
+pnpm cli          # run 3 reflow scenarios and print report to console
 ```
-
-Runs all 3 scenarios and prints a full change report with before/after dates and validation results.
 
 ## Test
 
@@ -53,10 +52,29 @@ Three demonstration scenarios in `src/data/`:
 
 ## Stack
 
-- **TypeScript** with strict mode
+- **TypeScript** with strict mode (`^6.0`, ESM)
+- **Express 5** — REST API server on :3000
+- **Prisma 6 + PostgreSQL 16** — persistence layer
 - **Luxon** for all date manipulation (UTC throughout)
+- **helmet** — hardened HTTP response headers
+- **express-rate-limit** — 100 req/min general, 10 req/min reflow
 - **Vitest** for tests
 - **tsx** for running TypeScript directly
+
+## API
+
+| Method | Path                      | Description                 |
+| ------ | ------------------------- | --------------------------- |
+| GET    | `/api/work-centers`       | List all work centers       |
+| GET    | `/api/work-orders`        | List all work orders        |
+| POST   | `/api/work-orders`        | Create work order           |
+| PUT    | `/api/work-orders/:docId` | Update work order           |
+| DELETE | `/api/work-orders/:docId` | Delete work order           |
+| POST   | `/api/reflow`             | Run reflow algorithm        |
+| GET    | `/api/events`             | SSE stream (real-time sync) |
+| GET    | `/api/health`             | Health check                |
+| GET    | `/api/docs`               | Swagger UI                  |
+| GET    | `/api/docs.json`          | Raw OpenAPI spec            |
 
 ## Key Design Decisions
 

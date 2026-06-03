@@ -34,19 +34,25 @@ Open [http://localhost:4200](http://localhost:4200).
 - **Edit panel** – same panel re-used in edit mode, pre-populated with existing data
 - **Overlap detection** – blocks save if dates overlap an existing order on the same work center (excludes self when editing)
 - **Today indicator** – vertical blue line marking the current date; "Today" button re-centers the viewport
-- **localStorage persistence** – work orders survive page refresh
+- **Real-time multi-user sync** – SSE stream from `/api/events`; timeline updates live when another user creates, edits, deletes, or reflows orders
 
 ## Architecture
 
 ```
 src/app/
-├── models/types.ts                          # Shared interfaces
-├── data/sample-data.ts                      # 5 work centers, 9 work orders
-├── services/work-order.service.ts           # Signal-based CRUD + overlap check
+├── models/types.ts                              # Shared interfaces + SSE event types
+├── tokens/api-url.token.ts                      # API_URL injection token
+├── interceptors/api-error.interceptor.ts        # Centralised HTTP error normalisation
+├── services/
+│   ├── work-order.service.ts                    # State facade — owns signals, orchestrates below
+│   ├── work-order-api.service.ts                # Thin HTTP layer (HttpClient), no state
+│   ├── schedule-validator.service.ts            # Pure overlap-check logic, no HTTP
+│   └── sse.service.ts                           # EventSource wrapper, auto-reconnects
 └── timeline/
-    ├── timeline.component.*                 # Main container, date↔pixel math
-    ├── work-order-bar/                      # Individual bar + three-dot menu
-    └── work-order-panel/                    # Create/Edit slide-out panel
+    ├── timeline.component.*                     # Main container, date↔pixel math
+    ├── utils/                                   # compute-notches, viewport, activity-size
+    ├── work-order-bar/                          # Individual bar + three-dot menu
+    └── work-order-panel/                        # Create/Edit slide-out panel
 ```
 
 ## Date Positioning

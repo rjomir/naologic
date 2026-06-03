@@ -58,8 +58,8 @@ Run `pnpm knip` at any time to audit dead code.
 
 - **Angular 21** standalone components, `ChangeDetectionStrategy.OnPush`
 - State via Angular **signals** (`signal()`, `computed()`)
-- `WorkOrderService` — fetches from backend API, exposes `workCenters`, `workOrders`, `loading`, `apiError` signals
-- API base URL hardcoded to `http://localhost:3000/api` in `work-order.service.ts`
+- `WorkOrderService` — state facade; exposes `workCenters`, `workOrders`, `loading`, `apiError` signals; delegates HTTP to `WorkOrderApiService`, validation to `ScheduleValidatorService`, live updates to `SseService`
+- API base URL provided via `API_URL` injection token (`frontend/src/app/tokens/api-url.token.ts`)
 - Timeline utilities in `frontend/src/app/timeline/utils/`:
   - `compute-notches.ts` — adaptive ruler notch selection
   - `viewport.utils.ts` — anchor zoom + clamped px↔ms conversion
@@ -76,15 +76,24 @@ Run `pnpm knip` at any time to audit dead code.
 
 ## Key files
 
-| File                                              | Purpose                          |
-| ------------------------------------------------- | -------------------------------- |
-| `frontend/src/app/services/work-order.service.ts` | API integration, all signals     |
-| `frontend/src/app/timeline/timeline.component.ts` | Main timeline orchestration      |
-| `frontend/src/app/timeline/utils/*.ts`            | Pure math utilities              |
-| `backend/src/reflow/reflow.service.ts`            | Scheduling algorithm             |
-| `backend/src/utils/date-utils.ts`                 | Shift-aware date helpers (Luxon) |
-| `backend/src/swagger.ts`                          | Full OpenAPI spec                |
-| `backend/prisma/schema.prisma`                    | DB schema                        |
+| File                                                      | Purpose                                |
+| --------------------------------------------------------- | -------------------------------------- |
+| `frontend/src/app/services/work-order.service.ts`         | State facade — signals, orchestration  |
+| `frontend/src/app/services/work-order-api.service.ts`     | Thin HTTP layer (HttpClient), no state |
+| `frontend/src/app/services/schedule-validator.service.ts` | Pure overlap-check, no HTTP            |
+| `frontend/src/app/services/sse.service.ts`                | EventSource wrapper for real-time sync |
+| `frontend/src/app/interceptors/api-error.interceptor.ts`  | Centralised HTTP error normalisation   |
+| `frontend/src/app/tokens/api-url.token.ts`                | API_URL injection token                |
+| `frontend/src/app/timeline/timeline.component.ts`         | Main timeline orchestration            |
+| `frontend/src/app/timeline/utils/*.ts`                    | Pure math utilities                    |
+| `backend/src/reflow/reflow.service.ts`                    | Scheduling algorithm                   |
+| `backend/src/utils/date-utils.ts`                         | Shift-aware date helpers (Luxon)       |
+| `backend/src/swagger.ts`                                  | OpenAPI spec entry point               |
+| `backend/src/openapi/registry.ts`                         | Builds the full OpenAPI 3.1 spec       |
+| `backend/src/middleware/security.ts`                      | helmet security headers                |
+| `backend/src/middleware/rate-limit.ts`                    | express-rate-limit (general + reflow)  |
+| `backend/src/sse/sse.service.ts`                          | SSE client registry + broadcast        |
+| `backend/prisma/schema.prisma`                            | DB schema                              |
 
 ## ESLint configs
 

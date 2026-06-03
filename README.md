@@ -18,7 +18,7 @@ docker compose up --build
 ```
 
 - **Frontend** → [http://localhost:4200](http://localhost:4200)
-- **Backend** → prints all 3 reflow scenarios to the console, then exits
+- **Backend API** → [http://localhost:3000](http://localhost:3000) (Express REST + PostgreSQL)
 
 ### Option 2 – Local
 
@@ -77,7 +77,7 @@ All root scripts delegate to the relevant workspace project(s).
 | Command             | Description                                |
 | ------------------- | ------------------------------------------ |
 | `pnpm dev`          | Start Angular frontend dev server on :4200 |
-| `pnpm be`           | Run backend reflow scenarios               |
+| `pnpm be`           | Start Express REST API server on :3000     |
 | `pnpm be:test`      | Run backend test suite (12 tests)          |
 | `pnpm lint`         | ESLint across both projects                |
 | `pnpm lint:fix`     | ESLint with auto-fix                       |
@@ -109,10 +109,10 @@ Prettier with shared config (`.prettierrc.json`). Angular HTML files use the `an
 
 ### Git Hooks
 
-| Hook         | Action                                                                                    |
-| ------------ | ----------------------------------------------------------------------------------------- |
-| `pre-commit` | Runs `lint-staged` — Prettier on all staged `.ts`, `.html`, `.scss`, `.json`, `.md` files |
-| `commit-msg` | Runs `commitlint` — enforces Conventional Commits format                                  |
+| Hook         | Action                                                                                                                                                                                |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pre-commit` | 1. `lint-staged` — Prettier on staged files · 2. `ng lint` — Angular ESLint · 3. `eslint src` — backend ESLint · 4–5. `tsc --noEmit` on both workspaces · 6. `knip` — dead-code audit |
+| `commit-msg` | Runs `commitlint` — enforces Conventional Commits format                                                                                                                              |
 
 ### Commit Convention
 
@@ -167,8 +167,9 @@ services:
     volumes:
       - ./frontend/src:/app/src # live reload
 
-  backend: # pnpm start (runs once, then exits)
-    restart: 'no'
+  backend: # pnpm start (Express REST API, persistent)
+    ports:
+      - '3000:3000'
 ```
 
 Source code is volume-mounted so changes to `frontend/src/` hot-reload inside the container without rebuilding the image.
