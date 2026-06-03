@@ -17,6 +17,7 @@
   "private": true,
   "packageManager": "pnpm@10.17.0",
   "dependencies": {
+    "@naologic/shared": "workspace:*",
     "@angular/common": "^21.2.0",
     "@angular/compiler": "^21.2.0",
     "@angular/core": "^21.2.0",

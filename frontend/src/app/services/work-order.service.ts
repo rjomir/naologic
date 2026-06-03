@@ -1,5 +1,13 @@
-import { Injectable, signal } from '@angular/core';
-import type { WorkCenterDocument, WorkOrderDocument } from '../models/types';
+import { Injectable, signal, inject } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
+import type {
+  WorkCenterDocument,
+  WorkOrderDocument,
+  CreateWorkOrderDto,
+  UpdateWorkOrderDto,
+  ReflowResponse,
+} from '../models/types';
 
 const API = 'http://localhost:3000/api';
 
@@ -10,6 +18,8 @@ export class WorkOrderService {
   readonly loading = signal(false);
   readonly apiError = signal<string | null>(null);
 
+  private readonly http = inject(HttpClient);
+
   constructor() {
     void this.loadAll();
   }
@@ -19,11 +29,11 @@ export class WorkOrderService {
     this.apiError.set(null);
     try {
       const [wcs, wos] = await Promise.all([
-        fetch(`${API}/work-centers`).then(r => r.json()),
-        fetch(`${API}/work-orders`).then(r => r.json()),
+        firstValueFrom(this.http.get<WorkCenterDocument[]>(`${API}/work-centers`)),
+        firstValueFrom(this.http.get<WorkOrderDocument[]>(`${API}/work-orders`)),
       ]);
-      this.workCenters.set(wcs as WorkCenterDocument[]);
-      this.workOrders.set(wos as WorkOrderDocument[]);
+      this.workCenters.set(wcs);
+      this.workOrders.set(wos);
     } catch {
       this.apiError.set('Could not reach the backend API. Is the server running?');
     } finally {
@@ -52,41 +62,30 @@ export class WorkOrderService {
     return null;
   }
 
-  async create(wo: Omit<WorkOrderDocument, 'docId'>): Promise<void> {
-    const res = await fetch(`${API}/work-orders`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(wo.data),
-    });
-    if (!res.ok) throw new Error('Failed to create work order');
-    const created = (await res.json()) as WorkOrderDocument;
+  async create(dto: CreateWorkOrderDto): Promise<void> {
+    const created = await firstValueFrom(
+      this.http.post<WorkOrderDocument>(`${API}/work-orders`, dto),
+    );
     this.workOrders.update(orders => [...orders, created]);
   }
 
-  async update(docId: string, partial: Partial<WorkOrderDocument['data']>): Promise<void> {
-    const res = await fetch(`${API}/work-orders/${docId}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(partial),
-    });
-    if (!res.ok) throw new Error('Failed to update work order');
-    const updated = (await res.json()) as WorkOrderDocument;
+  async update(docId: string, dto: UpdateWorkOrderDto): Promise<void> {
+    const updated = await firstValueFrom(
+      this.http.put<WorkOrderDocument>(`${API}/work-orders/${docId}`, dto),
+    );
     this.workOrders.update(orders => orders.map(wo => (wo.docId === docId ? updated : wo)));
   }
 
   async delete(docId: string): Promise<void> {
-    const res = await fetch(`${API}/work-orders/${docId}`, { method: 'DELETE' });
-    if (!res.ok) throw new Error('Failed to delete work order');
+    await firstValueFrom(this.http.delete<void>(`${API}/work-orders/${docId}`));
     this.workOrders.update(orders => orders.filter(wo => wo.docId !== docId));
   }
 
   async runReflow(): Promise<{ updatedCount: number }> {
-    const res = await fetch(`${API}/reflow`, { method: 'POST' });
-    if (!res.ok) throw new Error('Reflow failed');
-    const data = (await res.json()) as { updatedCount: number };
+    const data = await firstValueFrom(this.http.post<ReflowResponse>(`${API}/reflow`, {}));
     if (data.updatedCount > 0) {
-      const wos = await fetch(`${API}/work-orders`).then(r => r.json());
-      this.workOrders.set(wos as WorkOrderDocument[]);
+      const wos = await firstValueFrom(this.http.get<WorkOrderDocument[]>(`${API}/work-orders`));
+      this.workOrders.set(wos);
     }
     return { updatedCount: data.updatedCount };
   }

@@ -158,14 +158,11 @@ export class WorkOrderPanelComponent implements OnChanges {
         });
       } else {
         await this.woService.create({
-          docType: 'workOrder',
-          data: {
-            name,
-            status,
-            workCenterId: this.workCenterId,
-            startDate: startIso,
-            endDate: endIso,
-          },
+          name,
+          status,
+          workCenterId: this.workCenterId,
+          startDate: startIso,
+          endDate: endIso,
         });
       }
       this.saved.emit();

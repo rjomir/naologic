@@ -27,6 +27,7 @@ model Shift {
   startHour    Int        @map("start_hour")
   endHour      Int        @map("end_hour")
 
+  @@index([workCenterId])
   @@map("shifts")
 }
 
@@ -38,6 +39,8 @@ model MaintenanceWindow {
   endDate      DateTime   @map("end_date") @db.Timestamptz
   reason       String?
 
+  @@index([workCenterId])
+  @@index([startDate, endDate])
   @@map("maintenance_windows")
 }
 
@@ -68,10 +71,12 @@ model WorkOrder {
   durationMinutes       Int                @map("duration_minutes")
   isMaintenance         Boolean            @default(false) @map("is_maintenance")
   status                String             @default("open")
-  // docIds of work orders this one depends on — stored directly to avoid join complexity
   dependsOnWorkOrderIds String[]           @map("depends_on_work_order_ids")
   createdAt             DateTime           @default(now()) @map("created_at")
   updatedAt             DateTime           @updatedAt @map("updated_at")
 
+  @@index([workCenterId])
+  @@index([startDate])
+  @@index([manufacturingOrderId])
   @@map("work_orders")
 }

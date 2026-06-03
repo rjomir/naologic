@@ -1,26 +1,18 @@
-export type WorkOrderStatus = 'open' | 'in-progress' | 'complete' | 'blocked';
+// Re-export API contract types from the shared package — single source of truth
+export type {
+  WorkCenterDocument,
+  WorkOrderDocument,
+  WorkOrderStatus,
+  WorkOrderChange,
+  ReflowResponse,
+  CreateWorkOrderDto,
+  UpdateWorkOrderDto,
+} from '@naologic/shared';
+
+// ── UI-only types (not shared with backend) ─────────────────────────────────
+
 export type ZoomLevel = 'day' | 'week' | 'month';
 export type PanelMode = 'create' | 'edit';
-
-export interface WorkCenterDocument {
-  docId: string;
-  docType: 'workCenter';
-  data: {
-    name: string;
-  };
-}
-
-export interface WorkOrderDocument {
-  docId: string;
-  docType: 'workOrder';
-  data: {
-    name: string;
-    workCenterId: string;
-    status: WorkOrderStatus;
-    startDate: string; // ISO date YYYY-MM-DD
-    endDate: string; // ISO date YYYY-MM-DD
-  };
-}
 
 export interface TimelineColumn {
   key: string;
