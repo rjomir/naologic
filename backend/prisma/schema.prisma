@@ -1,0 +1,77 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model WorkCenter {
+  id                 String              @id @default(uuid())
+  docId              String              @unique @map("doc_id")
+  name               String
+  shifts             Shift[]
+  maintenanceWindows MaintenanceWindow[]
+  workOrders         WorkOrder[]
+  createdAt          DateTime            @default(now()) @map("created_at")
+
+  @@map("work_centers")
+}
+
+model Shift {
+  id           String     @id @default(uuid())
+  workCenterId String     @map("work_center_id")
+  workCenter   WorkCenter @relation(fields: [workCenterId], references: [id], onDelete: Cascade)
+  dayOfWeek    Int        @map("day_of_week")
+  startHour    Int        @map("start_hour")
+  endHour      Int        @map("end_hour")
+
+  @@map("shifts")
+}
+
+model MaintenanceWindow {
+  id           String     @id @default(uuid())
+  workCenterId String     @map("work_center_id")
+  workCenter   WorkCenter @relation(fields: [workCenterId], references: [id], onDelete: Cascade)
+  startDate    DateTime   @map("start_date") @db.Timestamptz
+  endDate      DateTime   @map("end_date") @db.Timestamptz
+  reason       String?
+
+  @@map("maintenance_windows")
+}
+
+model ManufacturingOrder {
+  id         String      @id @default(uuid())
+  docId      String      @unique @map("doc_id")
+  moNumber   String      @map("mo_number")
+  itemId     String      @map("item_id")
+  quantity   Int
+  dueDate    DateTime    @map("due_date") @db.Timestamptz
+  workOrders WorkOrder[]
+  createdAt  DateTime    @default(now()) @map("created_at")
+
+  @@map("manufacturing_orders")
+}
+
+model WorkOrder {
+  id                    String             @id @default(uuid())
+  docId                 String             @unique @map("doc_id")
+  woNumber              String             @map("wo_number")
+  name                  String
+  manufacturingOrderId  String             @map("manufacturing_order_id")
+  manufacturingOrder    ManufacturingOrder @relation(fields: [manufacturingOrderId], references: [id])
+  workCenterId          String             @map("work_center_id")
+  workCenter            WorkCenter         @relation(fields: [workCenterId], references: [id])
+  startDate             DateTime           @map("start_date") @db.Timestamptz
+  endDate               DateTime           @map("end_date") @db.Timestamptz
+  durationMinutes       Int                @map("duration_minutes")
+  isMaintenance         Boolean            @default(false) @map("is_maintenance")
+  status                String             @default("open")
+  // docIds of work orders this one depends on — stored directly to avoid join complexity
+  dependsOnWorkOrderIds String[]           @map("depends_on_work_order_ids")
+  createdAt             DateTime           @default(now()) @map("created_at")
+  updatedAt             DateTime           @updatedAt @map("updated_at")
+
+  @@map("work_orders")
+}
