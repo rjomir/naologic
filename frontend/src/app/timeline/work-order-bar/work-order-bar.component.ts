@@ -4,7 +4,6 @@ import {
   Output,
   EventEmitter,
   HostListener,
-  ElementRef,
   ChangeDetectionStrategy,
   signal,
 } from '@angular/core';

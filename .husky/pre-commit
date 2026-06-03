@@ -1,1 +1,3 @@
 pnpm exec lint-staged
+pnpm --filter timeline-frontend run lint
+pnpm --filter production-reflow run lint

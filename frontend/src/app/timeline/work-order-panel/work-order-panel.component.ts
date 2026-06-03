@@ -6,6 +6,7 @@ import {
   OnChanges,
   SimpleChanges,
   ChangeDetectionStrategy,
+  inject,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
@@ -64,22 +65,18 @@ export class WorkOrderPanelComponent implements OnChanges {
   readonly statusOptions = STATUS_OPTIONS;
   overlapError = '';
 
-  form: FormGroup;
+  private readonly fb = inject(FormBuilder);
+  private readonly woService = inject(WorkOrderService);
 
-  constructor(
-    private fb: FormBuilder,
-    private woService: WorkOrderService,
-  ) {
-    this.form = this.fb.group(
-      {
-        name: ['', Validators.required],
-        status: ['open', Validators.required],
-        startDate: [null as NgbDateStruct | null, Validators.required],
-        endDate: [null as NgbDateStruct | null, Validators.required],
-      },
-      { validators: endAfterStart },
-    );
-  }
+  form: FormGroup = this.fb.group(
+    {
+      name: ['', Validators.required],
+      status: ['open', Validators.required],
+      startDate: [null as NgbDateStruct | null, Validators.required],
+      endDate: [null as NgbDateStruct | null, Validators.required],
+    },
+    { validators: endAfterStart },
+  );
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['mode'] || changes['editTarget'] || changes['prefillStartDate']) {
@@ -169,9 +166,7 @@ export class WorkOrderPanelComponent implements OnChanges {
     this.closed.emit();
   }
 
-  get title(): string {
-    return 'Work Order Details';
-  }
+  readonly title = 'Work Order Details';
 
   get submitLabel(): string {
     return this.mode === 'edit' ? 'Save' : 'Create';
