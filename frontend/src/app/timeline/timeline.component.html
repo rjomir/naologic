@@ -35,7 +35,13 @@
     </div>
   </div>
 
-  <div class="timeline-scroll" #scrollContainer (wheel)="onWheel($event)">
+  <div
+    class="timeline-scroll"
+    #scrollContainer
+    (wheel)="onWheel($event)"
+    role="region"
+    aria-label="Work order timeline"
+  >
     <div class="timeline-inner" [style.width.px]="totalWidth() + 220">
       <div class="timeline-header">
         <div class="left-col left-col--header"><span>Work Center</span></div>
@@ -56,6 +62,7 @@
           class="timeline-row"
           role="row"
           tabindex="0"
+          [attr.aria-label]="wc.data.name + ' work center row'"
           (click)="onRowClick($event, wc.docId)"
           (keydown.enter)="onRowClick($event, wc.docId)"
           (mouseenter)="hoveredRow = wc.docId"

@@ -4,6 +4,12 @@
   [class.bar--xs]="barSize === 'xs'"
   [class.bar--sm]="barSize === 'sm'"
   [title]="tooltipText"
+  role="button"
+  tabindex="0"
+  [attr.aria-label]="
+    workOrder.data.name + ', ' + statusLabel + ', ' + workOrder.data.startDate + ' to ' + workOrder.data.endDate
+  "
+  (keydown.enter)="barSize === 'md' && toggleMenu($event)"
 >
   @if (barSize !== 'xs') {
     <span class="bar__name">{{ workOrder.data.name }}</span>
