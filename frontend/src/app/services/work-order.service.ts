@@ -8,8 +8,7 @@ import type {
   UpdateWorkOrderDto,
   ReflowResponse,
 } from '../models/types';
-
-const API = 'http://localhost:3000/api';
+import { API_URL } from '../tokens/api-url.token';
 
 @Injectable({ providedIn: 'root' })
 export class WorkOrderService {
@@ -19,6 +18,7 @@ export class WorkOrderService {
   readonly apiError = signal<string | null>(null);
 
   private readonly http = inject(HttpClient);
+  private readonly apiUrl = inject(API_URL);
 
   constructor() {
     void this.loadAll();
@@ -29,8 +29,8 @@ export class WorkOrderService {
     this.apiError.set(null);
     try {
       const [wcs, wos] = await Promise.all([
-        firstValueFrom(this.http.get<WorkCenterDocument[]>(`${API}/work-centers`)),
-        firstValueFrom(this.http.get<WorkOrderDocument[]>(`${API}/work-orders`)),
+        firstValueFrom(this.http.get<WorkCenterDocument[]>(`${this.apiUrl}/work-centers`)),
+        firstValueFrom(this.http.get<WorkOrderDocument[]>(`${this.apiUrl}/work-orders`)),
       ]);
       this.workCenters.set(wcs);
       this.workOrders.set(wos);
@@ -64,27 +64,29 @@ export class WorkOrderService {
 
   async create(dto: CreateWorkOrderDto): Promise<void> {
     const created = await firstValueFrom(
-      this.http.post<WorkOrderDocument>(`${API}/work-orders`, dto),
+      this.http.post<WorkOrderDocument>(`${this.apiUrl}/work-orders`, dto),
     );
     this.workOrders.update(orders => [...orders, created]);
   }
 
   async update(docId: string, dto: UpdateWorkOrderDto): Promise<void> {
     const updated = await firstValueFrom(
-      this.http.put<WorkOrderDocument>(`${API}/work-orders/${docId}`, dto),
+      this.http.put<WorkOrderDocument>(`${this.apiUrl}/work-orders/${docId}`, dto),
     );
     this.workOrders.update(orders => orders.map(wo => (wo.docId === docId ? updated : wo)));
   }
 
   async delete(docId: string): Promise<void> {
-    await firstValueFrom(this.http.delete<void>(`${API}/work-orders/${docId}`));
+    await firstValueFrom(this.http.delete<void>(`${this.apiUrl}/work-orders/${docId}`));
     this.workOrders.update(orders => orders.filter(wo => wo.docId !== docId));
   }
 
   async runReflow(): Promise<{ updatedCount: number }> {
-    const data = await firstValueFrom(this.http.post<ReflowResponse>(`${API}/reflow`, {}));
+    const data = await firstValueFrom(this.http.post<ReflowResponse>(`${this.apiUrl}/reflow`, {}));
     if (data.updatedCount > 0) {
-      const wos = await firstValueFrom(this.http.get<WorkOrderDocument[]>(`${API}/work-orders`));
+      const wos = await firstValueFrom(
+        this.http.get<WorkOrderDocument[]>(`${this.apiUrl}/work-orders`),
+      );
       this.workOrders.set(wos);
     }
     return { updatedCount: data.updatedCount };
