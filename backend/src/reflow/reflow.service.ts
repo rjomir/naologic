@@ -172,10 +172,11 @@ export class ReflowService {
         wc.data.maintenanceWindows,
       );
 
-      // Calculate end date consuming durationMinutes of working time
+      // Calculate end date consuming effective working time (production + setup)
+      const effectiveDuration = wo.data.durationMinutes + (wo.data.setupTimeMinutes ?? 0);
       const newEnd = calculateEndDate(
         newStart,
-        wo.data.durationMinutes,
+        effectiveDuration,
         wc.data.shifts,
         wc.data.maintenanceWindows,
       );

@@ -271,4 +271,71 @@ describe('ReflowService', () => {
       DateTime.fromISO(wo2.data.startDate) >= DateTime.fromISO('2026-06-01T10:00:00.000Z'),
     ).toBe(true);
   });
+
+  it('includes setupTimeMinutes in effective duration', () => {
+    const input = baseInput();
+    // 60 min production + 30 min setup = 90 min effective
+    input.workOrders = [
+      {
+        docId: 'wo-setup',
+        docType: 'workOrder',
+        data: {
+          workOrderNumber: 'WO-SETUP',
+          manufacturingOrderId: '',
+          workCenterId: 'wc-1',
+          startDate: '2026-06-02T08:00:00.000Z', // Monday
+          endDate: '2026-06-02T09:00:00.000Z', // stale — only 60 min
+          durationMinutes: 60,
+          setupTimeMinutes: 30,
+          isMaintenance: false,
+          dependsOnWorkOrderIds: [],
+        },
+      },
+    ];
+    const result = service.reflow(input);
+    const wo = result.updatedWorkOrders.find(w => w.docId === 'wo-setup')!;
+    // Effective duration 90 min → should end at 09:30
+    expect(wo.data.endDate).toBe('2026-06-02T09:30:00.000Z');
+  });
+
+  it('blocks a dependent order until after setup time completes', () => {
+    const input = baseInput();
+    input.workOrders = [
+      {
+        docId: 'wo-a',
+        docType: 'workOrder',
+        data: {
+          workOrderNumber: 'WO-A',
+          manufacturingOrderId: '',
+          workCenterId: 'wc-1',
+          startDate: '2026-06-02T08:00:00.000Z',
+          endDate: '2026-06-02T09:00:00.000Z',
+          durationMinutes: 60,
+          setupTimeMinutes: 30, // effective end: 09:30
+          isMaintenance: false,
+          dependsOnWorkOrderIds: [],
+        },
+      },
+      {
+        docId: 'wo-b',
+        docType: 'workOrder',
+        data: {
+          workOrderNumber: 'WO-B',
+          manufacturingOrderId: '',
+          workCenterId: 'wc-2',
+          startDate: '2026-06-02T09:00:00.000Z', // before WO-A effective end
+          endDate: '2026-06-02T10:00:00.000Z',
+          durationMinutes: 60,
+          isMaintenance: false,
+          dependsOnWorkOrderIds: ['wo-a'],
+        },
+      },
+    ];
+    const result = service.reflow(input);
+    const woB = result.updatedWorkOrders.find(w => w.docId === 'wo-b')!;
+    // WO-B must start at or after WO-A's effective end (09:30)
+    expect(
+      DateTime.fromISO(woB.data.startDate) >= DateTime.fromISO('2026-06-02T09:30:00.000Z'),
+    ).toBe(true);
+  });
 });
