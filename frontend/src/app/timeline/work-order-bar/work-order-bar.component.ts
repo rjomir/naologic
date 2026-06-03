@@ -58,4 +58,9 @@ export class WorkOrderBarComponent {
     };
     return labels[this.workOrder.data.status] ?? this.workOrder.data.status;
   }
+
+  get tooltipText(): string {
+    const { name, status, startDate, endDate } = this.workOrder.data;
+    return `${name}\nStatus: ${status}\n${startDate} → ${endDate}`;
+  }
 }

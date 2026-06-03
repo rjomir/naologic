@@ -3,7 +3,7 @@
   [class]="'bar--' + workOrder.data.status"
   [class.bar--xs]="barSize === 'xs'"
   [class.bar--sm]="barSize === 'sm'"
-  [title]="barSize === 'xs' ? workOrder.data.name : ''"
+  [title]="tooltipText"
 >
   @if (barSize !== 'xs') {
     <span class="bar__name">{{ workOrder.data.name }}</span>
