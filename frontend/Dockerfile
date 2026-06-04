@@ -6,20 +6,22 @@ RUN corepack enable && corepack prepare pnpm@10.17.0 --activate
 
 WORKDIR /app
 
-# Copy workspace manifest and root lockfile first (maximises layer cache reuse)
+# Copy every workspace manifest so pnpm can resolve the full workspace graph
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+COPY backend/package.json  ./backend/
 COPY frontend/package.json ./frontend/
-COPY shared/package.json ./shared/
+COPY shared/package.json   ./shared/
 
-# Install only the frontend workspace (and its local dependency @naologic/shared)
-RUN pnpm install --frozen-lockfile --filter timeline-frontend --filter @naologic/shared
+# Full workspace install — creates node_modules for every workspace,
+# which is required so workspace-local .bin symlinks resolve correctly
+RUN pnpm install --frozen-lockfile
 
-# Copy source for both the frontend and the shared package it imports
+# Copy source for frontend and the shared package it imports at runtime
 COPY frontend/. ./frontend/
-COPY shared/. ./shared/
-
-WORKDIR /app/frontend
+COPY shared/.   ./shared/
 
 EXPOSE 4200
 
-CMD ["pnpm", "exec", "ng", "serve", "--host", "0.0.0.0", "--poll", "500"]
+# pnpm --filter runs the script from inside the workspace directory,
+# so ng can be resolved via /app/frontend/node_modules/.bin/ng
+CMD ["pnpm", "--filter", "timeline-frontend", "start"]

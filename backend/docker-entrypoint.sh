@@ -2,7 +2,7 @@
 set -e
 
 echo "==> Waiting for PostgreSQL…"
-until npx prisma db execute --stdin <<'SQL'
+until pnpm --filter production-reflow exec prisma db execute --stdin <<'SQL'
 SELECT 1;
 SQL
 do
@@ -11,10 +11,10 @@ do
 done
 
 echo "==> Pushing schema…"
-npx prisma db push --accept-data-loss
+pnpm --filter production-reflow exec prisma db push --accept-data-loss
 
 echo "==> Seeding database…"
-pnpm db:seed
+pnpm --filter production-reflow db:seed
 
 echo "==> Starting API server…"
-exec pnpm start
+exec pnpm --filter production-reflow start
