@@ -6,18 +6,27 @@ RUN corepack enable && corepack prepare pnpm@10.17.0 --activate
 
 WORKDIR /app
 
-COPY package.json pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile
+# Copy workspace manifest and root lockfile first (maximises layer cache reuse)
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+COPY backend/package.json ./backend/
+COPY shared/package.json ./shared/
 
-# Generate Prisma client before copying source
-COPY prisma ./prisma
-RUN pnpm db:generate
+# Install only the backend workspace (and its local dependency @naologic/shared)
+RUN pnpm install --frozen-lockfile --filter production-reflow --filter @naologic/shared
 
-COPY . .
+# Generate Prisma client before source arrives (separate cache layer)
+COPY backend/prisma ./backend/prisma
+RUN pnpm --filter production-reflow db:generate
+
+# Copy source for both the backend and the shared package it imports
+COPY backend/. ./backend/
+COPY shared/. ./shared/
+
+WORKDIR /app/backend
 
 EXPOSE 3000
 
-COPY docker-entrypoint.sh /docker-entrypoint.sh
+COPY backend/docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
 
 ENTRYPOINT ["/docker-entrypoint.sh"]

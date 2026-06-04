@@ -21,8 +21,8 @@ services:
   # ── Backend API (Express + Prisma) ────────────────────────────────────────
   backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: backend/Dockerfile
     container_name: naologic-backend
     restart: unless-stopped
     environment:
@@ -38,8 +38,8 @@ services:
   # ── Angular Frontend ──────────────────────────────────────────────────────
   frontend:
     build:
-      context: ./frontend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: frontend/Dockerfile
     container_name: naologic-frontend
     restart: unless-stopped
     environment:
@@ -47,7 +47,7 @@ services:
     ports:
       - '4200:4200'
     volumes:
-      - ./frontend/src:/app/src
+      - ./frontend/src:/app/frontend/src
     depends_on:
       - backend
 
