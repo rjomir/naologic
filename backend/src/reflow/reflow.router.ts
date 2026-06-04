@@ -100,6 +100,8 @@ export function createReflowRouter(
         changes: result.changes,
         explanation: result.explanation,
         updatedCount: result.changes.length,
+        totalDelayMinutes: result.totalDelayMinutes,
+        workCenterUtilization: result.workCenterUtilization,
       });
     } catch (err) {
       next(err);

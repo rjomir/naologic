@@ -298,6 +298,52 @@ describe('ReflowService', () => {
     expect(wo.data.endDate).toBe('2026-06-02T09:30:00.000Z');
   });
 
+  it('returns totalDelayMinutes equal to the sum of all positive delays', () => {
+    const input = baseInput();
+    // 480-min order delayed to start 2 hours late (120 min delay)
+    input.workOrders = [
+      {
+        docId: 'wo-late',
+        docType: 'workOrder',
+        data: {
+          workOrderNumber: 'WO-LATE',
+          manufacturingOrderId: '',
+          workCenterId: 'wc-1',
+          startDate: '2026-06-01T10:00:00.000Z',
+          endDate: '2026-06-01T16:00:00.000Z',
+          durationMinutes: 480,
+          isMaintenance: false,
+          dependsOnWorkOrderIds: [],
+        },
+      },
+    ];
+    const result = service.reflow(input);
+    expect(result.totalDelayMinutes).toBeGreaterThan(0);
+  });
+
+  it('returns workCenterUtilization map with a ratio between 0 and 1', () => {
+    const input = baseInput();
+    input.workOrders = [
+      {
+        docId: 'wo-u',
+        docType: 'workOrder',
+        data: {
+          workOrderNumber: 'WO-U',
+          manufacturingOrderId: '',
+          workCenterId: 'wc-1',
+          startDate: '2026-06-02T08:00:00.000Z',
+          endDate: '2026-06-02T12:00:00.000Z',
+          durationMinutes: 240,
+          isMaintenance: false,
+          dependsOnWorkOrderIds: [],
+        },
+      },
+    ];
+    const result = service.reflow(input);
+    expect(result.workCenterUtilization['wc-1']).toBeGreaterThan(0);
+    expect(result.workCenterUtilization['wc-1']).toBeLessThanOrEqual(1);
+  });
+
   it('blocks a dependent order until after setup time completes', () => {
     const input = baseInput();
     input.workOrders = [

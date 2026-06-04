@@ -78,6 +78,8 @@ export interface ReflowResponse {
   changes: WorkOrderChange[];
   explanation: string;
   updatedCount: number;
+  totalDelayMinutes: number;
+  workCenterUtilization: Record<string, number>;
 }
 
 // ── Request DTOs (what the frontend sends) ──────────────────────────────────

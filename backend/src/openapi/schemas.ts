@@ -78,6 +78,14 @@ export const ReflowResponseSchema = z
     changes: z.array(WorkOrderChangeSchema),
     explanation: z.string(),
     updatedCount: z.number().int().nonnegative(),
+    totalDelayMinutes: z.number().nonnegative().openapi({
+      description: 'Sum of all positive delay minutes introduced by the reflow',
+    }),
+    workCenterUtilization: z
+      .record(z.string(), z.number().min(0).max(1))
+      .openapi({
+        description: 'Per-work-center ratio of scheduled minutes to available shift minutes',
+      }),
   })
   .openapi('ReflowResponse');
 

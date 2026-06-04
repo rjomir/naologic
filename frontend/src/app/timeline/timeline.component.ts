@@ -229,11 +229,15 @@ export class TimelineComponent implements AfterViewInit {
     this.reflowResult.set(null);
     try {
       const r = await this.woService.runReflow();
-      this.reflowResult.set(
-        r.updatedCount === 0
-          ? 'Schedule is already valid — no changes needed.'
-          : `Reflow complete: ${r.updatedCount} order(s) rescheduled.`,
-      );
+      if (r.updatedCount === 0) {
+        this.reflowResult.set('Schedule is already valid — no changes needed.');
+      } else {
+        const delayStr =
+          r.totalDelayMinutes > 0 ? ` Total delay: +${r.totalDelayMinutes} min.` : '';
+        this.reflowResult.set(
+          `Reflow complete: ${r.updatedCount} order(s) rescheduled.${delayStr}`,
+        );
+      }
     } catch {
       this.reflowResult.set('Reflow failed. Check server logs.');
     } finally {

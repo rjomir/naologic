@@ -130,12 +130,20 @@ export class WorkOrderService {
     this.workOrders.update(orders => orders.filter(wo => wo.docId !== docId));
   }
 
-  async runReflow(): Promise<{ updatedCount: number }> {
+  async runReflow(): Promise<{
+    updatedCount: number;
+    totalDelayMinutes: number;
+    workCenterUtilization: Record<string, number>;
+  }> {
     const data = await firstValueFrom(this.api.runReflow());
     if (data.updatedCount > 0) {
       const wos = await firstValueFrom(this.api.getWorkOrders());
       this.workOrders.set(wos);
     }
-    return { updatedCount: data.updatedCount };
+    return {
+      updatedCount: data.updatedCount,
+      totalDelayMinutes: data.totalDelayMinutes,
+      workCenterUtilization: data.workCenterUtilization,
+    };
   }
 }
