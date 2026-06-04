@@ -27,7 +27,7 @@ export class WorkOrderBarComponent {
 
   menuOpen = signal(false);
 
-  toggleMenu(event: MouseEvent): void {
+  toggleMenu(event: Event): void {
     event.stopPropagation();
     this.menuOpen.update(v => !v);
   }

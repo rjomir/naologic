@@ -2,7 +2,7 @@
 set -e
 
 echo "==> Waiting for PostgreSQL…"
-until pnpm --filter production-reflow exec prisma db execute --stdin <<'SQL'
+until pnpm --filter production-reflow exec prisma db execute --url "$DATABASE_URL" --stdin <<'SQL'
 SELECT 1;
 SQL
 do
