@@ -14,6 +14,7 @@ import type {
 import { WorkOrderApiService } from './work-order-api.service';
 import { ScheduleValidatorService } from './schedule-validator.service';
 import { SseService } from './sse.service';
+import { loadWorkOrdersFromStorage, saveWorkOrdersToStorage } from '../utils/local-storage';
 
 /**
  * State facade — owns signals, delegates HTTP to WorkOrderApiService,
@@ -33,6 +34,10 @@ export class WorkOrderService {
   private readonly destroyRef = inject(DestroyRef);
 
   constructor() {
+    // Hydrate immediately from cache so the timeline renders before the API responds
+    const cached = loadWorkOrdersFromStorage();
+    if (cached.length > 0) this.workOrders.set(cached);
+
     void this.loadAll();
     this.subscribeToRealTimeUpdates();
   }
@@ -47,6 +52,7 @@ export class WorkOrderService {
       ]);
       this.workCenters.set(wcs);
       this.workOrders.set(wos);
+      saveWorkOrdersToStorage(wos);
     } catch {
       this.apiError.set('Could not reach the backend API. Is the server running?');
     } finally {
@@ -92,7 +98,11 @@ export class WorkOrderService {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(({ updates }) => {
         const map = new Map(updates.map(wo => [wo.docId, wo]));
-        this.workOrders.update(orders => orders.map(o => map.get(o.docId) ?? o));
+        this.workOrders.update(orders => {
+          const next = orders.map(o => map.get(o.docId) ?? o);
+          saveWorkOrdersToStorage(next);
+          return next;
+        });
       });
   }
 
@@ -117,17 +127,29 @@ export class WorkOrderService {
 
   async create(dto: CreateWorkOrderDto): Promise<void> {
     const created = await firstValueFrom(this.api.createWorkOrder(dto));
-    this.workOrders.update(orders => [...orders, created]);
+    this.workOrders.update(orders => {
+      const next = [...orders, created];
+      saveWorkOrdersToStorage(next);
+      return next;
+    });
   }
 
   async update(docId: string, dto: UpdateWorkOrderDto): Promise<void> {
     const updated = await firstValueFrom(this.api.updateWorkOrder(docId, dto));
-    this.workOrders.update(orders => orders.map(wo => (wo.docId === docId ? updated : wo)));
+    this.workOrders.update(orders => {
+      const next = orders.map(wo => (wo.docId === docId ? updated : wo));
+      saveWorkOrdersToStorage(next);
+      return next;
+    });
   }
 
   async delete(docId: string): Promise<void> {
     await firstValueFrom(this.api.deleteWorkOrder(docId));
-    this.workOrders.update(orders => orders.filter(wo => wo.docId !== docId));
+    this.workOrders.update(orders => {
+      const next = orders.filter(wo => wo.docId !== docId);
+      saveWorkOrdersToStorage(next);
+      return next;
+    });
   }
 
   async runReflow(): Promise<{
