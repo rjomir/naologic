@@ -52,6 +52,7 @@
                 "input": "public"
               }
             ],
+            "polyfills": ["@angular/localize/init"],
             "styles": ["src/styles.scss"]
           },
           "configurations": {
