@@ -69,6 +69,7 @@ model WorkOrder {
   startDate             DateTime           @map("start_date") @db.Timestamptz
   endDate               DateTime           @map("end_date") @db.Timestamptz
   durationMinutes       Int                @map("duration_minutes")
+  setupTimeMinutes      Int                @default(0) @map("setup_time_minutes")
   isMaintenance         Boolean            @default(false) @map("is_maintenance")
   status                String             @default("open")
   dependsOnWorkOrderIds String[]           @map("depends_on_work_order_ids")

@@ -16,6 +16,7 @@ export interface CreateWorkOrderData {
   startDate: Date;
   endDate: Date;
   durationMinutes: number;
+  setupTimeMinutes?: number;
 }
 
 /** Partial update — only provided fields are written */
@@ -26,6 +27,7 @@ export interface UpdateWorkOrderData {
   startDate?: Date;
   endDate?: Date;
   durationMinutes?: number;
+  setupTimeMinutes?: number;
 }
 
 export interface IWorkOrderRepository {
@@ -68,6 +70,7 @@ export class PrismaWorkOrderRepository implements IWorkOrderRepository {
         startDate: data.startDate,
         endDate: data.endDate,
         durationMinutes: data.durationMinutes,
+        setupTimeMinutes: data.setupTimeMinutes ?? 0,
         isMaintenance: false,
         dependsOnWorkOrderIds: [],
       },
@@ -87,6 +90,7 @@ export class PrismaWorkOrderRepository implements IWorkOrderRepository {
         ...(data.startDate !== undefined && { startDate: data.startDate }),
         ...(data.endDate !== undefined && { endDate: data.endDate }),
         ...(data.durationMinutes !== undefined && { durationMinutes: data.durationMinutes }),
+        ...(data.setupTimeMinutes !== undefined && { setupTimeMinutes: data.setupTimeMinutes }),
       },
       include: INCLUDE_RELS,
     });

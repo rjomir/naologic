@@ -46,10 +46,16 @@ describe('toDoc', () => {
         startDate: '2026-06-01',
         endDate: '2026-06-05',
         durationMinutes: 480,
+        setupTimeMinutes: 0,
         isMaintenance: false,
         dependsOnWorkOrderIds: [],
       },
     });
+  });
+
+  it('includes setupTimeMinutes in the document data', () => {
+    const doc = toDoc(makeRow({ setupTimeMinutes: 45 }));
+    expect(doc.data.setupTimeMinutes).toBe(45);
   });
 
   it('formats dates as YYYY-MM-DD strings', () => {

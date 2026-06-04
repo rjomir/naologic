@@ -53,6 +53,7 @@ export const WorkOrderDocumentSchema = z
       startDate: z.string().openapi({ description: 'YYYY-MM-DD' }),
       endDate: z.string().openapi({ description: 'YYYY-MM-DD' }),
       durationMinutes: z.number().int().nonnegative(),
+      setupTimeMinutes: z.number().int().nonnegative(),
       isMaintenance: z.boolean(),
       dependsOnWorkOrderIds: z.array(z.string()),
     }),

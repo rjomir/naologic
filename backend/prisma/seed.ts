@@ -110,6 +110,7 @@ async function main() {
         startDate,
         endDate,
         durationMinutes,
+        setupTimeMinutes: 0,
         isMaintenance: false,
         status: wo.status,
         dependsOnWorkOrderIds: [],

@@ -16,6 +16,7 @@ export function toDoc(wo: WorkOrderWithRels): WorkOrderDocument {
       startDate: wo.startDate.toISOString().slice(0, 10),
       endDate: wo.endDate.toISOString().slice(0, 10),
       durationMinutes: wo.durationMinutes,
+      setupTimeMinutes: wo.setupTimeMinutes ?? 0,
       isMaintenance: wo.isMaintenance,
       dependsOnWorkOrderIds: wo.dependsOnWorkOrderIds,
     },

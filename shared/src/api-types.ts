@@ -5,12 +5,12 @@ export type WorkOrderStatus = 'open' | 'in-progress' | 'complete' | 'blocked';
 export interface Shift {
   dayOfWeek: number; // 0=Sunday … 6=Saturday
   startHour: number; // 0-23
-  endHour: number;   // 0-23
+  endHour: number; // 0-23
 }
 
 export interface MaintenanceWindow {
   startDate: string; // ISO UTC
-  endDate: string;   // ISO UTC
+  endDate: string; // ISO UTC
   reason?: string;
 }
 
@@ -35,8 +35,9 @@ export interface WorkOrderData {
   manufacturingOrderId: string;
   status: WorkOrderStatus;
   startDate: string; // YYYY-MM-DD
-  endDate: string;   // YYYY-MM-DD
+  endDate: string; // YYYY-MM-DD
   durationMinutes: number;
+  setupTimeMinutes?: number;
   isMaintenance: boolean;
   dependsOnWorkOrderIds: string[];
 }
@@ -86,7 +87,7 @@ export interface CreateWorkOrderDto {
   workCenterId: string;
   status: WorkOrderStatus;
   startDate: string; // YYYY-MM-DD
-  endDate: string;   // YYYY-MM-DD
+  endDate: string; // YYYY-MM-DD
   durationMinutes?: number;
 }
 

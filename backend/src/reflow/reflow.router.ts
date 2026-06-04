@@ -52,6 +52,7 @@ export function createReflowRouter(
           startDate: wo.startDate.toISOString(),
           endDate: wo.endDate.toISOString(),
           durationMinutes: wo.durationMinutes,
+          setupTimeMinutes: wo.setupTimeMinutes,
           isMaintenance: wo.isMaintenance,
           dependsOnWorkOrderIds: wo.dependsOnWorkOrderIds,
         },
