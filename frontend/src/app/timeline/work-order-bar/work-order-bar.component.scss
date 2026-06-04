@@ -1,6 +1,15 @@
+:host {
+  display: block;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+}
+
 .bar {
   position: absolute;
   top: 8px;
+  left: 0;
+  right: 0;
   height: 40px;
   border-radius: 6px;
   display: flex;

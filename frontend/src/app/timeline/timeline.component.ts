@@ -169,13 +169,16 @@ export class TimelineComponent implements AfterViewInit {
 
     if (el.scrollLeft < SCROLL_EXPAND_THRESHOLD && !this.expanding) {
       this.expanding = true;
+      const addPx = EXPAND_DAYS * this.pixelsPerDay();
       this.daysBeforeToday.update(v => v + EXPAND_DAYS);
-      // After Angular re-renders the wider grid, compensate scrollLeft so the
-      // currently-visible content stays in place.
-      setTimeout(() => {
-        el.scrollLeft += EXPAND_DAYS * this.pixelsPerDay();
-        this.expanding = false;
-      }, 0);
+      // Double rAF: first frame lets Angular update the DOM width,
+      // second frame compensates scrollLeft after the browser has painted.
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          el.scrollLeft += addPx;
+          this.expanding = false;
+        });
+      });
     }
 
     const distFromRight = el.scrollWidth - el.scrollLeft - el.clientWidth;
@@ -199,6 +202,16 @@ export class TimelineComponent implements AfterViewInit {
       to: ts.getTime() + this.totalDays() * 86_400_000,
     });
     return new Date(ms);
+  }
+
+  // Returns YYYY-MM-DD in local time (not UTC) so click-to-date is timezone-correct.
+  private pxToLocalDateStr(px: number): string {
+    const d = this.pxToDate(px);
+    return [
+      d.getFullYear(),
+      String(d.getMonth() + 1).padStart(2, '0'),
+      String(d.getDate()).padStart(2, '0'),
+    ].join('-');
   }
 
   getBarStyle(wo: WorkOrderDocument): Record<string, string> {
@@ -225,9 +238,7 @@ export class TimelineComponent implements AfterViewInit {
     const rect = el.getBoundingClientRect();
     this.openCreatePanel(
       wcId,
-      this.pxToDate(event.clientX - rect.left - LEFT_COL_PX + el.scrollLeft)
-        .toISOString()
-        .slice(0, 10),
+      this.pxToLocalDateStr(event.clientX - rect.left - LEFT_COL_PX + el.scrollLeft),
     );
   }
 
