@@ -21,10 +21,13 @@ import type { PanelMode, WorkOrderDocument, TimelineColumn } from '../models/typ
 
 const PX_PER_DAY_PRESETS = { day: 50, week: 20, month: 6 } as const;
 type ZoomPreset = keyof typeof PX_PER_DAY_PRESETS;
-const TOTAL_DAYS_BEFORE = 30;
-const TOTAL_DAYS_AFTER = 90;
-const TOTAL_DAYS = TOTAL_DAYS_BEFORE + TOTAL_DAYS_AFTER;
+const INITIAL_DAYS_BEFORE = 30;
+const INITIAL_DAYS_AFTER = 90;
 const LEFT_COL_PX = 220;
+/** How far from the edge (px) before we expand the timeline. */
+const SCROLL_EXPAND_THRESHOLD = 300;
+/** Days to add on each expansion. */
+const EXPAND_DAYS = 30;
 
 @Component({
   selector: 'app-timeline',
@@ -57,16 +60,24 @@ export class TimelineComponent implements AfterViewInit {
     { value: 'month', label: 'Month' },
   ];
 
-  private readonly timelineStart: Date = (() => {
+  // Mutable day counts drive the timeline range so infinite scroll can expand either edge.
+  private readonly daysBeforeToday = signal(INITIAL_DAYS_BEFORE);
+  private readonly daysAfterToday = signal(INITIAL_DAYS_AFTER);
+  /** Prevent concurrent left-edge expansions from fighting each other. */
+  private expanding = false;
+
+  readonly totalDays = computed(() => this.daysBeforeToday() + this.daysAfterToday());
+
+  readonly timelineStart = computed<Date>(() => {
     const d = new Date(this.today);
-    d.setDate(d.getDate() - TOTAL_DAYS_BEFORE);
+    d.setDate(d.getDate() - this.daysBeforeToday());
     d.setHours(0, 0, 0, 0);
     return d;
-  })();
+  });
 
   readonly columns = computed<TimelineColumn[]>(() => {
-    const origin = this.timelineStart;
-    return Array.from({ length: TOTAL_DAYS }, (_, i) => {
+    const origin = this.timelineStart();
+    return Array.from({ length: this.totalDays() }, (_, i) => {
       const date = new Date(origin.getTime() + i * 86_400_000);
       return {
         key: date.toISOString().slice(0, 10),
@@ -76,8 +87,8 @@ export class TimelineComponent implements AfterViewInit {
     });
   });
 
-  readonly totalWidth = computed(() => TOTAL_DAYS * this.pixelsPerDay());
-  readonly todayOffset = computed(() => this.dateToPx(this.today, this.timelineStart));
+  readonly totalWidth = computed(() => this.totalDays() * this.pixelsPerDay());
+  readonly todayOffset = computed(() => this.dateToPx(this.today, this.timelineStart()));
 
   readonly majorNotches = computed<TimelineNotch[]>(() => {
     const cols = this.columns();
@@ -90,7 +101,7 @@ export class TimelineComponent implements AfterViewInit {
   });
 
   getNotchLeft(notch: TimelineNotch): number {
-    return this.dateToPx(notch.date, this.timelineStart);
+    return this.dateToPx(notch.date, this.timelineStart());
   }
 
   panelVisible = signal(false);
@@ -116,9 +127,9 @@ export class TimelineComponent implements AfterViewInit {
     event.preventDefault();
     const el = this.scrollContainer.nativeElement;
     const rect = el.getBoundingClientRect();
+    const ts = this.timelineStart();
     const cursorContentX = event.clientX - rect.left - LEFT_COL_PX + el.scrollLeft;
-    const cursorDateMs =
-      this.timelineStart.getTime() + (cursorContentX / this.pixelsPerDay()) * 86_400_000;
+    const cursorDateMs = ts.getTime() + (cursorContentX / this.pixelsPerDay()) * 86_400_000;
     const visibleDurationMs = ((el.clientWidth - LEFT_COL_PX) / this.pixelsPerDay()) * 86_400_000;
     const viewportFrom = cursorDateMs - (cursorContentX / el.scrollWidth) * visibleDurationMs;
     const viewportTo = viewportFrom + visibleDurationMs;
@@ -141,10 +152,36 @@ export class TimelineComponent implements AfterViewInit {
     requestAnimationFrame(() => {
       el.scrollLeft = Math.max(
         0,
-        ((cursorDateMs - this.timelineStart.getTime()) / 86_400_000) * newPxPerDay -
+        ((cursorDateMs - this.timelineStart().getTime()) / 86_400_000) * newPxPerDay -
           (event.clientX - rect.left - LEFT_COL_PX),
       );
     });
+  }
+
+  /**
+   * Called on the scroll container's (scroll) event.
+   * Prepends columns when near the left edge, appends when near the right edge.
+   * When prepending, the scroll position is shifted right by the added pixel width
+   * so the visible content does not jump.
+   */
+  onScrollTimeline(event: Event): void {
+    const el = event.target as HTMLDivElement;
+
+    if (el.scrollLeft < SCROLL_EXPAND_THRESHOLD && !this.expanding) {
+      this.expanding = true;
+      this.daysBeforeToday.update(v => v + EXPAND_DAYS);
+      // After Angular re-renders the wider grid, compensate scrollLeft so the
+      // currently-visible content stays in place.
+      setTimeout(() => {
+        el.scrollLeft += EXPAND_DAYS * this.pixelsPerDay();
+        this.expanding = false;
+      }, 0);
+    }
+
+    const distFromRight = el.scrollWidth - el.scrollLeft - el.clientWidth;
+    if (distFromRight < SCROLL_EXPAND_THRESHOLD) {
+      this.daysAfterToday.update(v => v + EXPAND_DAYS);
+    }
   }
 
   private syncZoomLabel(p: number): void {
@@ -156,21 +193,20 @@ export class TimelineComponent implements AfterViewInit {
   }
 
   private pxToDate(px: number): Date {
+    const ts = this.timelineStart();
     const ms = pxToMs(px, this.totalWidth(), {
-      from: this.timelineStart.getTime(),
-      to: this.timelineStart.getTime() + TOTAL_DAYS * 86_400_000,
+      from: ts.getTime(),
+      to: ts.getTime() + this.totalDays() * 86_400_000,
     });
     return new Date(ms);
   }
 
   getBarStyle(wo: WorkOrderDocument): Record<string, string> {
+    const ts = this.timelineStart();
     const start = new Date(wo.data.startDate);
     const end = new Date(wo.data.endDate);
-    const left = this.dateToPx(start, this.timelineStart);
-    const width = Math.max(
-      this.dateToPx(end, this.timelineStart) - left,
-      this.pixelsPerDay() * 0.5,
-    );
+    const left = this.dateToPx(start, ts);
+    const width = Math.max(this.dateToPx(end, ts) - left, this.pixelsPerDay() * 0.5);
     return { left: `${left}px`, width: `${width}px` };
   }
 

@@ -252,4 +252,65 @@ test.describe('Timeline happy flow', () => {
     await page.locator('.today-btn').click();
     await expect(page.locator('.today-line').first()).toBeAttached();
   });
+
+  test('scrolling to the right edge appends more date columns', async ({ page }) => {
+    await setup(page);
+
+    const scrollContainer = page.locator('.timeline-scroll');
+    await expect(scrollContainer).toBeVisible({ timeout: 10_000 });
+
+    // Measure initial total grid width
+    const initialScrollWidth = await scrollContainer.evaluate(el => el.scrollWidth);
+
+    // Scroll to the far right to trigger the append
+    await scrollContainer.evaluate(el => {
+      el.scrollLeft = el.scrollWidth - el.clientWidth;
+    });
+
+    // Wait for Angular to react and append columns (the scroll width should grow)
+    await page.waitForFunction(
+      (args: { sel: string; initial: number }) => {
+        const el = document.querySelector(args.sel);
+        return el !== null && el.scrollWidth > args.initial;
+      },
+      { sel: '.timeline-scroll', initial: initialScrollWidth },
+      { timeout: 3_000 },
+    );
+
+    const finalScrollWidth = await scrollContainer.evaluate(el => el.scrollWidth);
+    expect(finalScrollWidth).toBeGreaterThan(initialScrollWidth);
+  });
+
+  test('scrolling to the left edge prepends columns and keeps visible date stable', async ({
+    page,
+  }) => {
+    await setup(page);
+
+    const scrollContainer = page.locator('.timeline-scroll');
+    await expect(scrollContainer).toBeVisible({ timeout: 10_000 });
+
+    // First scroll to a known position well away from the left edge
+    await scrollContainer.evaluate(el => {
+      el.scrollLeft = 2000;
+    });
+
+    const initialScrollWidth = await scrollContainer.evaluate(el => el.scrollWidth);
+
+    // Now scroll to the left edge to trigger a prepend
+    await scrollContainer.evaluate(el => {
+      el.scrollLeft = 0;
+    });
+
+    await page.waitForFunction(
+      (args: { sel: string; initial: number }) => {
+        const el = document.querySelector(args.sel);
+        return el !== null && el.scrollWidth > args.initial;
+      },
+      { sel: '.timeline-scroll', initial: initialScrollWidth },
+      { timeout: 3_000 },
+    );
+
+    const finalScrollWidth = await scrollContainer.evaluate(el => el.scrollWidth);
+    expect(finalScrollWidth).toBeGreaterThan(initialScrollWidth);
+  });
 });
