@@ -82,10 +82,10 @@ async function main() {
   // ── Work Orders ───────────────────────────────────────────────────────────
   const woData = [
     { docId: 'wo-001', woNumber: 'WO-001', name: 'Pipe Batch #A1',   wc: 'wc-extrusion-a', status: 'complete',    start: -10, end: -7  },
-    { docId: 'wo-002', woNumber: 'WO-002', name: 'Pipe Batch #A2',   wc: 'wc-extrusion-a', status: 'in_progress', start: -3,  end: 4   },
+    { docId: 'wo-002', woNumber: 'WO-002', name: 'Pipe Batch #A2',   wc: 'wc-extrusion-a', status: 'in-progress', start: -3,  end: 4   },
     { docId: 'wo-003', woNumber: 'WO-003', name: 'Shaft Milling',    wc: 'wc-cnc-1',       status: 'complete',    start: -8,  end: -5  },
     { docId: 'wo-004', woNumber: 'WO-004', name: 'Coupling Finish',  wc: 'wc-cnc-1',       status: 'open',        start: 2,   end: 6   },
-    { docId: 'wo-005', woNumber: 'WO-005', name: 'Valve Assembly',   wc: 'wc-assembly',    status: 'in_progress', start: -2,  end: 3   },
+    { docId: 'wo-005', woNumber: 'WO-005', name: 'Valve Assembly',   wc: 'wc-assembly',    status: 'in-progress', start: -2,  end: 3   },
     { docId: 'wo-006', woNumber: 'WO-006', name: 'Bracket Assembly', wc: 'wc-assembly',    status: 'blocked',     start: 5,   end: 9   },
     { docId: 'wo-007', woNumber: 'WO-007', name: 'Dimensional Check',wc: 'wc-quality',     status: 'complete',    start: -6,  end: -3  },
     { docId: 'wo-008', woNumber: 'WO-008', name: 'Final Inspection', wc: 'wc-quality',     status: 'open',        start: 4,   end: 8   },
