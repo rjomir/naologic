@@ -49,7 +49,8 @@ function endAfterStart(group: AbstractControl): ValidationErrors | null {
 export class WorkOrderPanelComponent implements OnChanges {
   @Input() mode: PanelMode = 'create';
   @Input() workCenterId = '';
-  @Input() prefillStartDate = '';
+  @Input() prefillStartDatetime = '';
+  @Input() prefillEndDatetime = '';
   @Input() editTarget: WorkOrderDocument | null = null;
 
   @Output() closed = new EventEmitter<void>();
@@ -78,7 +79,12 @@ export class WorkOrderPanelComponent implements OnChanges {
   );
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['mode'] || changes['editTarget'] || changes['prefillStartDate']) {
+    if (
+      changes['mode'] ||
+      changes['editTarget'] ||
+      changes['prefillStartDatetime'] ||
+      changes['prefillEndDatetime']
+    ) {
       this.overlapError = '';
       this.initForm();
     }
@@ -97,22 +103,14 @@ export class WorkOrderPanelComponent implements OnChanges {
       this.form.reset({
         name: '',
         status: 'open',
-        startDatetime: this.prefillStartDate ? `${this.prefillStartDate}T08:00:00` : null,
-        endDatetime: this.prefillStartDate
-          ? `${this.addDays(this.prefillStartDate, 7)}T17:00:00`
-          : null,
+        startDatetime: this.prefillStartDatetime || null,
+        endDatetime: this.prefillEndDatetime || null,
       });
     }
   }
 
   private ensureTime(iso: string, defaultHHMM: string): string {
     return iso.includes('T') ? iso : `${iso}T${defaultHHMM}:00`;
-  }
-
-  private addDays(iso: string, n: number): string {
-    const d = new Date(iso);
-    d.setDate(d.getDate() + n);
-    return d.toISOString().slice(0, 10);
   }
 
   async onSubmit(): Promise<void> {

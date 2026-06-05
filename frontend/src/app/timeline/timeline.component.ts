@@ -151,7 +151,8 @@ export class TimelineComponent implements AfterViewInit {
   panelVisible = signal(false);
   panelMode = signal<PanelMode>('create');
   panelWorkCenterId = signal('');
-  panelPrefillDate = signal('');
+  panelPrefillStart = signal('');
+  panelPrefillEnd = signal('');
   panelEditTarget = signal<WorkOrderDocument | null>(null);
   reflowing = signal(false);
   reflowResult = signal<string | null>(null);
@@ -263,14 +264,27 @@ export class TimelineComponent implements AfterViewInit {
     return new Date(ms);
   }
 
-  // Returns YYYY-MM-DD in local time (not UTC) so click-to-date is timezone-correct.
-  private pxToLocalDateStr(px: number): string {
+  // Returns YYYY-MM-DDTHH:MM:00 in local time so click-to-date preserves the time of day.
+  private pxToLocalDateTimeStr(px: number): string {
     const d = this.pxToDate(px);
-    return [
-      d.getFullYear(),
-      String(d.getMonth() + 1).padStart(2, '0'),
-      String(d.getDate()).padStart(2, '0'),
-    ].join('-');
+    const p = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}:00`;
+  }
+
+  // End datetime for a new order: duration scales with zoom so the bar is always meaningfully sized.
+  private defaultEndDatetime(startIso: string): string {
+    const ppd = this.pixelsPerDay();
+    let durMs: number;
+    if (ppd >= 400)
+      durMs = 4 * 60 * 60 * 1000; // hour zoom  → 4 h
+    else if (ppd >= 30)
+      durMs = 24 * 60 * 60 * 1000; // day zoom   → 1 day
+    else if (ppd >= 12)
+      durMs = 3 * 24 * 60 * 60 * 1000; // week zoom → 3 days
+    else durMs = 7 * 24 * 60 * 60 * 1000; // month zoom → 7 days
+    const end = new Date(new Date(startIso).getTime() + durMs);
+    const p = (n: number) => String(n).padStart(2, '0');
+    return `${end.getFullYear()}-${p(end.getMonth() + 1)}-${p(end.getDate())}T${p(end.getHours())}:${p(end.getMinutes())}:00`;
   }
 
   getBarStyle(wo: WorkOrderDocument): Record<string, string> {
@@ -310,13 +324,15 @@ export class TimelineComponent implements AfterViewInit {
     // box is off-screen, so browser dispatches clicks to the grid-area behind it)
     const viewportX = event.clientX - rect.left;
     if (viewportX < LEFT_COL_PX) return;
-    this.openCreatePanel(wcId, this.pxToLocalDateStr(viewportX - LEFT_COL_PX + el.scrollLeft));
+    const start = this.pxToLocalDateTimeStr(viewportX - LEFT_COL_PX + el.scrollLeft);
+    this.openCreatePanel(wcId, start, this.defaultEndDatetime(start));
   }
 
-  openCreatePanel(wcId: string, d: string): void {
+  openCreatePanel(wcId: string, start: string, end: string): void {
     this.panelMode.set('create');
     this.panelWorkCenterId.set(wcId);
-    this.panelPrefillDate.set(d);
+    this.panelPrefillStart.set(start);
+    this.panelPrefillEnd.set(end);
     this.panelEditTarget.set(null);
     this.panelVisible.set(true);
   }
@@ -324,7 +340,8 @@ export class TimelineComponent implements AfterViewInit {
   openEditPanel(wo: WorkOrderDocument): void {
     this.panelMode.set('edit');
     this.panelWorkCenterId.set(wo.data.workCenterId);
-    this.panelPrefillDate.set('');
+    this.panelPrefillStart.set('');
+    this.panelPrefillEnd.set('');
     this.panelEditTarget.set(wo);
     this.panelVisible.set(true);
   }
