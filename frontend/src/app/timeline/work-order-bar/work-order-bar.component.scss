@@ -114,6 +114,40 @@
   }
 }
 
+.bar__tooltip {
+  position: fixed;
+  transform: translateY(calc(-100% - 10px));
+  background: #1a1f36;
+  color: #fff;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.bar__tooltip-name {
+  font-weight: 700;
+  color: #fff;
+}
+
+.bar__tooltip-meta {
+  color: #a8b0cc;
+  font-size: 11px;
+}
+
+.bar__tooltip-status {
+  color: #a8b0cc;
+  font-size: 11px;
+  text-transform: capitalize;
+}
+
 .bar__dropdown {
   position: fixed;
   background: #fff;

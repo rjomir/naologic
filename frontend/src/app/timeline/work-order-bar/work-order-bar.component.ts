@@ -5,6 +5,7 @@ import {
   EventEmitter,
   HostListener,
   ChangeDetectionStrategy,
+  OnDestroy,
   signal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -19,7 +20,7 @@ import type { BarSize } from '../utils/activity-size.model';
   styleUrl: './work-order-bar.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class WorkOrderBarComponent {
+export class WorkOrderBarComponent implements OnDestroy {
   @Input({ required: true }) workOrder!: WorkOrderDocument;
   @Input() barSize: BarSize = 'md';
   @Output() editOrder = new EventEmitter<WorkOrderDocument>();
@@ -28,6 +29,33 @@ export class WorkOrderBarComponent {
   menuOpen = signal(false);
   dropdownTop = signal(0);
   dropdownRight = signal(0);
+
+  tooltipVisible = signal(false);
+  tooltipTop = signal(0);
+  tooltipLeft = signal(0);
+
+  private _tooltipTimer: ReturnType<typeof setTimeout> | null = null;
+
+  showTooltip(event: MouseEvent): void {
+    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    this._tooltipTimer = setTimeout(() => {
+      this.tooltipTop.set(rect.top);
+      this.tooltipLeft.set(rect.left);
+      this.tooltipVisible.set(true);
+    }, 200);
+  }
+
+  hideTooltip(): void {
+    if (this._tooltipTimer !== null) {
+      clearTimeout(this._tooltipTimer);
+      this._tooltipTimer = null;
+    }
+    this.tooltipVisible.set(false);
+  }
+
+  ngOnDestroy(): void {
+    this.hideTooltip();
+  }
 
   toggleMenu(event: Event): void {
     event.stopPropagation();
@@ -65,10 +93,5 @@ export class WorkOrderBarComponent {
       blocked: 'Blocked',
     };
     return labels[this.workOrder.data.status] ?? this.workOrder.data.status;
-  }
-
-  get tooltipText(): string {
-    const { name, status, startDate, endDate } = this.workOrder.data;
-    return `${name}\nStatus: ${status}\n${startDate} → ${endDate}`;
   }
 }

@@ -3,12 +3,13 @@
   [class]="'bar--' + workOrder.data.status"
   [class.bar--xs]="barSize === 'xs'"
   [class.bar--sm]="barSize === 'sm'"
-  [attr.title]="tooltipText"
   role="button"
   tabindex="0"
   [attr.aria-label]="
     workOrder.data.name + ', ' + statusLabel + ', ' + workOrder.data.startDate + ' to ' + workOrder.data.endDate
   "
+  (mouseenter)="showTooltip($event)"
+  (mouseleave)="hideTooltip()"
   (keydown.enter)="(barSize === 'md' || barSize === 'sm') && toggleMenu($event)"
 >
   @if (barSize !== 'xs') {
@@ -34,5 +35,13 @@
   <div class="bar__dropdown" [style.top.px]="dropdownTop()" [style.right.px]="dropdownRight()">
     <button class="dropdown-item" (click)="onEdit($event)">Edit</button>
     <button class="dropdown-item dropdown-item--danger" (click)="onDelete($event)">Delete</button>
+  </div>
+}
+
+@if (tooltipVisible()) {
+  <div class="bar__tooltip" [style.top.px]="tooltipTop()" [style.left.px]="tooltipLeft()">
+    <span class="bar__tooltip-name">{{ workOrder.data.name }}</span>
+    <span class="bar__tooltip-meta">{{ workOrder.data.startDate }} → {{ workOrder.data.endDate }}</span>
+    <span class="bar__tooltip-status">{{ statusLabel }}</span>
   </div>
 }
