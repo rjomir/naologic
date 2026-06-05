@@ -81,19 +81,21 @@ export const ReflowResponseSchema = z
     totalDelayMinutes: z.number().nonnegative().openapi({
       description: 'Sum of all positive delay minutes introduced by the reflow',
     }),
-    workCenterUtilization: z
-      .record(z.string(), z.number().min(0).max(1))
-      .openapi({
-        description: 'Per-work-center ratio of scheduled minutes to available shift minutes',
-      }),
+    workCenterUtilization: z.record(z.string(), z.number().min(0).max(1)).openapi({
+      description: 'Per-work-center ratio of scheduled minutes to available shift minutes',
+    }),
   })
   .openapi('ReflowResponse');
 
 // ── Request DTO schemas ─────────────────────────────────────────────────────
 
-const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+// Accepts date-only (YYYY-MM-DD) or datetime (YYYY-MM-DDTHH:MM or YYYY-MM-DDTHH:MM:SS)
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2})?)?$/;
 const isoDate = () =>
-  z.string().regex(ISO_DATE_RE, 'Must be YYYY-MM-DD').openapi({ example: '2025-07-15' });
+  z
+    .string()
+    .regex(ISO_DATE_RE, 'Must be YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS')
+    .openapi({ example: '2025-07-15T08:00:00' });
 
 export const CreateWorkOrderSchema = z
   .object({
