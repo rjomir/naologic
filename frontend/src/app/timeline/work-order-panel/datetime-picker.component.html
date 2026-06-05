@@ -1,0 +1,41 @@
+<ng-template #pickerContent>
+  <div class="dt-popover">
+    <ngb-datepicker [ngModel]="selectedDate" (dateSelect)="onDateSelect($event)"></ngb-datepicker>
+    <div class="dt-popover__time">
+      <span class="dt-popover__time-label">Time</span>
+      <div class="dt-popover__time-row">
+        <select class="dt-popover__select" [value]="selectedHour" (change)="onHourChange($event)">
+          @for (h of hours; track h.value) {
+            <option [value]="h.value">{{ h.label }}</option>
+          }
+        </select>
+        <span class="dt-popover__sep">:</span>
+        <select class="dt-popover__select" [value]="selectedMinute" (change)="onMinuteChange($event)">
+          @for (m of minutes; track m.value) {
+            <option [value]="m.value">{{ m.label }}</option>
+          }
+        </select>
+      </div>
+    </div>
+    <div class="dt-popover__footer">
+      <button type="button" class="dt-popover__done" (click)="onDone()">Done</button>
+    </div>
+  </div>
+</ng-template>
+
+<input
+  class="dt-input"
+  [class.dt-input--error]="hasError"
+  [id]="inputId"
+  [value]="displayValue"
+  [placeholder]="placeholder"
+  [disabled]="isDisabled"
+  [ngbPopover]="pickerContent"
+  #pop="ngbPopover"
+  popoverClass="dt-popover-window"
+  placement="bottom-start auto"
+  triggers="click"
+  [autoClose]="'outside'"
+  (hidden)="onPopoverHidden()"
+  readonly
+/>
