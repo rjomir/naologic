@@ -37,10 +37,11 @@ export class WorkOrderBarComponent implements OnDestroy {
   private _tooltipTimer: ReturnType<typeof setTimeout> | null = null;
 
   showTooltip(event: MouseEvent): void {
-    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    const x = event.clientX;
+    const y = event.clientY;
     this._tooltipTimer = setTimeout(() => {
-      this.tooltipTop.set(rect.top);
-      this.tooltipLeft.set(rect.left);
+      this.tooltipTop.set(y);
+      this.tooltipLeft.set(x + 12);
       this.tooltipVisible.set(true);
     }, 200);
   }
