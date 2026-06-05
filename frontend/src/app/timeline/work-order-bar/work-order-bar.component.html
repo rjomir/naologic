@@ -9,17 +9,17 @@
   [attr.aria-label]="
     workOrder.data.name + ', ' + statusLabel + ', ' + workOrder.data.startDate + ' to ' + workOrder.data.endDate
   "
-  (keydown.enter)="barSize === 'md' && toggleMenu($event)"
+  (keydown.enter)="(barSize === 'md' || barSize === 'sm') && toggleMenu($event)"
 >
   @if (barSize !== 'xs') {
     <span class="bar__name">{{ workOrder.data.name }}</span>
   }
-  @if (barSize === 'md' || barSize === 'sm') {
+  @if (barSize === 'md') {
     <span class="bar__badge" [class]="'badge--' + workOrder.data.status">
       {{ statusLabel }}
     </span>
   }
-  @if (barSize === 'md') {
+  @if (barSize === 'md' || barSize === 'sm') {
     <button class="bar__menu-btn" (click)="toggleMenu($event)" title="Actions">
       <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
         <circle cx="2" cy="7" r="1.4" />
@@ -30,7 +30,7 @@
   }
 </div>
 
-@if (barSize === 'md' && menuOpen()) {
+@if ((barSize === 'md' || barSize === 'sm') && menuOpen()) {
   <div class="bar__dropdown" [style.top.px]="dropdownTop()" [style.right.px]="dropdownRight()">
     <button class="dropdown-item" (click)="onEdit($event)">Edit</button>
     <button class="dropdown-item dropdown-item--danger" (click)="onDelete($event)">Delete</button>
