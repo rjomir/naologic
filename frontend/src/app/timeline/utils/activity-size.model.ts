@@ -13,7 +13,8 @@ export type BarSize = 'hidden' | 'xs' | 'sm' | 'md';
 /** Absolute pixel thresholds — independent of total timeline width so prepending days never reclassifies a bar */
 const PX_HIDDEN = 4;
 const PX_XS = 24;
-const PX_SM = 64;
+// 130 px: md padding (20) + name (30) + gap (8) + largest badge (41) + gap (8) + button (24) = 131
+const PX_SM = 130;
 
 /**
  * Classify a bar into a display tier based on its absolute rendered pixel width.

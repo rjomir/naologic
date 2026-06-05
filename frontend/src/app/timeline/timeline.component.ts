@@ -278,7 +278,8 @@ export class TimelineComponent implements AfterViewInit {
     const start = new Date(wo.data.startDate);
     const end = new Date(wo.data.endDate);
     const left = this.dateToPx(start, ts);
-    const width = Math.max(this.dateToPx(end, ts) - left, this.pixelsPerDay() * 0.5);
+    // 36 px: sm padding (4) + gap (4) + menu-button (24) + sm padding (4) — ensures the button always fits
+    const width = Math.max(this.dateToPx(end, ts) - left, 36);
     return { left: `${left}px`, width: `${width}px` };
   }
 
