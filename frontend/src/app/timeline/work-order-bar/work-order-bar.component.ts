@@ -26,9 +26,17 @@ export class WorkOrderBarComponent {
   @Output() deleteOrder = new EventEmitter<string>();
 
   menuOpen = signal(false);
+  dropdownTop = signal(0);
+  dropdownRight = signal(0);
 
   toggleMenu(event: Event): void {
     event.stopPropagation();
+    if (!this.menuOpen()) {
+      const btn = event.currentTarget as HTMLElement;
+      const rect = btn.getBoundingClientRect();
+      this.dropdownTop.set(rect.bottom + 4);
+      this.dropdownRight.set(window.innerWidth - rect.right);
+    }
     this.menuOpen.update(v => !v);
   }
 

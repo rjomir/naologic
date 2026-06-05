@@ -17,6 +17,8 @@ export interface TimelineNotch {
   date: Date;
   /** Pixel width this notch occupies in the total content area */
   widthPx: number;
+  /** Duration this notch covers in milliseconds */
+  spanMs: number;
 }
 
 interface NotchConfig {
@@ -75,33 +77,52 @@ const NOTCH_CONFIGS: NotchConfig[] = [
  *
  * @param viewportFromMs    Start of visible range (Unix ms)
  * @param viewportToMs      End of visible range (Unix ms)
- * @param containerWidthPx  Total pixel width of the timeline content area
+ * @param containerWidthPx  Total pixel width of the timeline content area (used for notch widths)
+ * @param visibleWidthPx    Pixel width of the visible viewport (used for density guard).
+ *                          Defaults to containerWidthPx when not provided.
+ * @param minUnit           Coarsest unit the algorithm is allowed to pick (e.g. 'day' means
+ *                          year/month/week are skipped). Falls back to coarser units only when
+ *                          the minUnit and finer units are all too small to be readable.
  */
 export function computeNotches(
   viewportFromMs: number,
   viewportToMs: number,
   containerWidthPx: number,
+  visibleWidthPx = containerWidthPx,
+  minUnit?: string,
 ): TimelineNotch[] {
   if (containerWidthPx <= 0 || viewportToMs <= viewportFromMs) return [];
 
   const duration = viewportToMs - viewportFromMs;
 
-  // Walk from finest to coarsest; take the first combination where the rendered
-  // notch width meets the minimum threshold.
+  const minIdx = minUnit
+    ? Math.max(
+        0,
+        NOTCH_CONFIGS.findIndex(c => c.unit === minUnit),
+      )
+    : 0;
+
   let selectedConfig: NotchConfig = NOTCH_CONFIGS[NOTCH_CONFIGS.length - 1];
   let selectedMultiplier: number = selectedConfig.multipliers.at(-1)!;
 
-  outer: for (const config of NOTCH_CONFIGS) {
-    for (const mult of config.multipliers) {
-      const spanMs = config.msPerUnit * mult;
-      const notchPx = (spanMs / duration) * containerWidthPx;
-      if (notchPx >= MIN_NOTCH_PX) {
-        selectedConfig = config;
-        selectedMultiplier = mult;
-        break outer;
+  const pickFrom = (startIndex: number): boolean => {
+    for (let i = startIndex; i < NOTCH_CONFIGS.length; i++) {
+      const config = NOTCH_CONFIGS[i];
+      for (const mult of config.multipliers) {
+        const spanMs = config.msPerUnit * mult;
+        const notchPx = (spanMs / duration) * containerWidthPx;
+        if (notchPx >= MIN_NOTCH_PX && notchPx < visibleWidthPx / 2) {
+          selectedConfig = config;
+          selectedMultiplier = mult;
+          return true;
+        }
       }
     }
-  }
+    return false;
+  };
+
+  // Try from minUnit first; fall back to coarser units if nothing in range is readable.
+  if (!pickFrom(minIdx) && minIdx > 0) pickFrom(0);
 
   const spanMs = selectedConfig.msPerUnit * selectedMultiplier;
   // Snap to the first boundary before the viewport start
@@ -120,6 +141,7 @@ export function computeNotches(
       label: selectedConfig.formatLabel(new Date(t)),
       date: new Date(Math.max(t, viewportFromMs)),
       widthPx,
+      spanMs,
     });
   }
 

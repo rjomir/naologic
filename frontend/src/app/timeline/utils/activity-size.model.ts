@@ -10,22 +10,19 @@
 /** Display tiers from smallest to largest */
 export type BarSize = 'hidden' | 'xs' | 'sm' | 'md';
 
-/** Fraction thresholds (bar width / total content width) */
-const THRESHOLD_HIDDEN = 0.001; // < 0.1%  — too thin to render anything meaningful
-const THRESHOLD_XS = 0.006; // < 0.6%  — just a colored sliver, no text
-const THRESHOLD_SM = 0.022; // < 2.2%  — show status badge only, no name
+/** Absolute pixel thresholds — independent of total timeline width so prepending days never reclassifies a bar */
+const PX_HIDDEN = 4;
+const PX_XS = 24;
+const PX_SM = 64;
 
 /**
- * Classify a bar into a display tier based on its width relative to total content width.
+ * Classify a bar into a display tier based on its absolute rendered pixel width.
  *
- * @param barWidthPx      Rendered pixel width of the bar
- * @param totalWidthPx    Total pixel width of the timeline content area
+ * @param barWidthPx  Rendered pixel width of the bar
  */
-export function getBarSize(barWidthPx: number, totalWidthPx: number): BarSize {
-  if (totalWidthPx <= 0 || barWidthPx <= 0) return 'hidden';
-  const fraction = barWidthPx / totalWidthPx;
-  if (fraction < THRESHOLD_HIDDEN) return 'hidden';
-  if (fraction < THRESHOLD_XS) return 'xs';
-  if (fraction < THRESHOLD_SM) return 'sm';
+export function getBarSize(barWidthPx: number): BarSize {
+  if (barWidthPx < PX_HIDDEN) return 'hidden';
+  if (barWidthPx < PX_XS) return 'xs';
+  if (barWidthPx < PX_SM) return 'sm';
   return 'md';
 }

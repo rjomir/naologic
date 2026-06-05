@@ -8,6 +8,7 @@
     "dev": "pnpm --filter timeline-frontend start",
     "be": "pnpm --filter production-reflow start",
     "be:test": "pnpm --filter production-reflow test",
+    "test:e2e": "pnpm --filter timeline-frontend test:e2e",
     "lint": "pnpm -r run lint",
     "lint:fix": "pnpm -r run lint:fix",
     "format": "prettier --write \"**/*.{ts,html,scss,css,json,md,yml,yaml}\"",

@@ -20,9 +20,9 @@ import {
   ValidationErrors,
 } from '@angular/forms';
 import { NgSelectModule } from '@ng-select/ng-select';
-import { NgbDatepickerModule, NgbDateStruct } from '@ng-bootstrap/ng-bootstrap';
 import type { WorkOrderDocument, WorkOrderStatus, PanelMode } from '../../models/types';
 import { WorkOrderService } from '../../services/work-order.service';
+import { DatetimePickerComponent } from './datetime-picker.component';
 
 const STATUS_OPTIONS: { value: WorkOrderStatus; label: string }[] = [
   { value: 'open', label: 'Open' },
@@ -31,26 +31,17 @@ const STATUS_OPTIONS: { value: WorkOrderStatus; label: string }[] = [
   { value: 'blocked', label: 'Blocked' },
 ];
 
-function dateToNgb(iso: string): NgbDateStruct {
-  const d = new Date(iso);
-  return { year: d.getFullYear(), month: d.getMonth() + 1, day: d.getDate() };
-}
-
-function ngbToIso(s: NgbDateStruct): string {
-  return `${s.year}-${String(s.month).padStart(2, '0')}-${String(s.day).padStart(2, '0')}`;
-}
-
 function endAfterStart(group: AbstractControl): ValidationErrors | null {
-  const start = group.get('startDate')?.value as NgbDateStruct | null;
-  const end = group.get('endDate')?.value as NgbDateStruct | null;
+  const start = group.get('startDatetime')?.value as string | null;
+  const end = group.get('endDatetime')?.value as string | null;
   if (!start || !end) return null;
-  return ngbToIso(end) <= ngbToIso(start) ? { endBeforeStart: true } : null;
+  return end <= start ? { endBeforeStart: true } : null;
 }
 
 @Component({
   selector: 'app-work-order-panel',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, NgSelectModule, NgbDatepickerModule],
+  imports: [CommonModule, ReactiveFormsModule, NgSelectModule, DatetimePickerComponent],
   templateUrl: './work-order-panel.component.html',
   styleUrl: './work-order-panel.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -80,8 +71,8 @@ export class WorkOrderPanelComponent implements OnChanges {
     {
       name: ['', Validators.required],
       status: ['open', Validators.required],
-      startDate: [null as NgbDateStruct | null, Validators.required],
-      endDate: [null as NgbDateStruct | null, Validators.required],
+      startDatetime: [null as string | null, Validators.required],
+      endDatetime: [null as string | null, Validators.required],
     },
     { validators: endAfterStart },
   );
@@ -99,21 +90,23 @@ export class WorkOrderPanelComponent implements OnChanges {
       this.form.reset({
         name: d.name,
         status: d.status,
-        startDate: dateToNgb(d.startDate),
-        endDate: dateToNgb(d.endDate),
+        startDatetime: this.ensureTime(d.startDate, '08:00'),
+        endDatetime: this.ensureTime(d.endDate, '17:00'),
       });
     } else {
-      const startNgb = this.prefillStartDate ? dateToNgb(this.prefillStartDate) : null;
-      const endNgb = this.prefillStartDate
-        ? dateToNgb(this.addDays(this.prefillStartDate, 7))
-        : null;
       this.form.reset({
         name: '',
         status: 'open',
-        startDate: startNgb,
-        endDate: endNgb,
+        startDatetime: this.prefillStartDate ? `${this.prefillStartDate}T08:00:00` : null,
+        endDatetime: this.prefillStartDate
+          ? `${this.addDays(this.prefillStartDate, 7)}T17:00:00`
+          : null,
       });
     }
+  }
+
+  private ensureTime(iso: string, defaultHHMM: string): string {
+    return iso.includes('T') ? iso : `${iso}T${defaultHHMM}:00`;
   }
 
   private addDays(iso: string, n: number): string {
@@ -128,18 +121,21 @@ export class WorkOrderPanelComponent implements OnChanges {
       return;
     }
 
-    const { name, status, startDate, endDate } = this.form.value as {
+    const { name, status, startDatetime, endDatetime } = this.form.value as {
       name: string;
       status: WorkOrderStatus;
-      startDate: NgbDateStruct;
-      endDate: NgbDateStruct;
+      startDatetime: string;
+      endDatetime: string;
     };
 
-    const startIso = ngbToIso(startDate);
-    const endIso = ngbToIso(endDate);
     const excludeId = this.mode === 'edit' ? this.editTarget?.docId : undefined;
 
-    const overlap = this.woService.checkOverlap(startIso, endIso, this.workCenterId, excludeId);
+    const overlap = this.woService.checkOverlap(
+      startDatetime,
+      endDatetime,
+      this.workCenterId,
+      excludeId,
+    );
     if (overlap) {
       this.overlapError = overlap;
       return;
@@ -153,16 +149,16 @@ export class WorkOrderPanelComponent implements OnChanges {
         await this.woService.update(this.editTarget.docId, {
           name,
           status,
-          startDate: startIso,
-          endDate: endIso,
+          startDate: startDatetime,
+          endDate: endDatetime,
         });
       } else {
         await this.woService.create({
           name,
           status,
           workCenterId: this.workCenterId,
-          startDate: startIso,
-          endDate: endIso,
+          startDate: startDatetime,
+          endDate: endDatetime,
         });
       }
       this.saved.emit();
@@ -191,7 +187,7 @@ export class WorkOrderPanelComponent implements OnChanges {
 
   get groupError(): string | null {
     if (this.form.touched && this.form.hasError('endBeforeStart')) {
-      return 'End date must be after start date';
+      return 'End must be after start';
     }
     return null;
   }

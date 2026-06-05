@@ -9,25 +9,30 @@
 
 <aside class="panel" role="dialog" [attr.aria-label]="title">
   <div class="panel__header">
-    <h2 class="panel__title">{{ title }}</h2>
-    <button class="panel__close" (click)="onCancel()" aria-label="Close">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
-        <line x1="2" y1="2" x2="14" y2="14" />
-        <line x1="14" y1="2" x2="2" y2="14" />
-      </svg>
-    </button>
+    <div class="panel__header-top">
+      <div class="panel__header-text">
+        <h2 class="panel__title">{{ title }}</h2>
+        <p class="panel__subtitle">Specify the dates, name and status for this order</p>
+      </div>
+      <div class="panel__header-actions">
+        <button type="button" class="btn btn--ghost" (click)="onCancel()">Cancel</button>
+        <button type="submit" form="wo-form" class="btn btn--primary" [disabled]="saving()">
+          {{ saving() ? 'Saving…' : submitLabel }}
+        </button>
+      </div>
+    </div>
   </div>
 
-  <form class="panel__body" [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
+  <form id="wo-form" class="panel__body" [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
     <div class="field">
-      <label class="field__label" for="wo-name">Work Order Name <span class="required">*</span></label>
+      <label class="field__label" for="wo-name">Work Order Name</label>
       <input
         id="wo-name"
         class="field__input"
         [class.field__input--error]="hasError('name', 'required')"
         type="text"
         formControlName="name"
-        placeholder="e.g. Pipe Batch #A3"
+        placeholder="Acme Inc."
         autocomplete="off"
       />
       @if (hasError('name', 'required')) {
@@ -36,7 +41,7 @@
     </div>
 
     <div class="field">
-      <label class="field__label" for="wo-status">Status <span class="required">*</span></label>
+      <label class="field__label" for="wo-status">Status</label>
       <ng-select
         inputId="wo-status"
         formControlName="status"
@@ -46,61 +51,33 @@
         [clearable]="false"
         [searchable]="false"
         placeholder="Select status"
-      ></ng-select>
+      >
+        <ng-template ng-label-tmp let-item="item">
+          <span class="status-badge" [ngClass]="'status-badge--' + item.value">{{ item.label }}</span>
+        </ng-template>
+      </ng-select>
     </div>
 
     <div class="field">
-      <label class="field__label" for="start-dp-input">Start Date <span class="required">*</span></label>
-      <div class="date-input-wrap">
-        <input
-          id="start-dp-input"
-          class="field__input"
-          [class.field__input--error]="hasError('startDate', 'required')"
-          placeholder="YYYY-MM-DD"
-          formControlName="startDate"
-          ngbDatepicker
-          #startDp="ngbDatepicker"
-          (click)="startDp.open()"
-          readonly
-        />
-        <button type="button" class="date-toggle" (click)="startDp.toggle()">
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5">
-            <rect x="1" y="2" width="12" height="11" rx="2" />
-            <line x1="4" y1="1" x2="4" y2="4" />
-            <line x1="10" y1="1" x2="10" y2="4" />
-            <line x1="1" y1="6" x2="13" y2="6" />
-          </svg>
-        </button>
-      </div>
-      @if (hasError('startDate', 'required')) {
+      <label class="field__label" for="wo-start-dt">Start date</label>
+      <app-datetime-picker
+        inputId="wo-start-dt"
+        formControlName="startDatetime"
+        [hasError]="hasError('startDatetime', 'required')"
+      ></app-datetime-picker>
+      @if (hasError('startDatetime', 'required')) {
         <span class="field__error">Start date is required</span>
       }
     </div>
 
     <div class="field">
-      <label class="field__label" for="end-dp-input">End Date <span class="required">*</span></label>
-      <div class="date-input-wrap">
-        <input
-          id="end-dp-input"
-          class="field__input"
-          [class.field__input--error]="hasError('endDate', 'required')"
-          placeholder="YYYY-MM-DD"
-          formControlName="endDate"
-          ngbDatepicker
-          #endDp="ngbDatepicker"
-          (click)="endDp.open()"
-          readonly
-        />
-        <button type="button" class="date-toggle" (click)="endDp.toggle()">
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5">
-            <rect x="1" y="2" width="12" height="11" rx="2" />
-            <line x1="4" y1="1" x2="4" y2="4" />
-            <line x1="10" y1="1" x2="10" y2="4" />
-            <line x1="1" y1="6" x2="13" y2="6" />
-          </svg>
-        </button>
-      </div>
-      @if (hasError('endDate', 'required')) {
+      <label class="field__label" for="wo-end-dt">End date</label>
+      <app-datetime-picker
+        inputId="wo-end-dt"
+        formControlName="endDatetime"
+        [hasError]="hasError('endDatetime', 'required')"
+      ></app-datetime-picker>
+      @if (hasError('endDatetime', 'required')) {
         <span class="field__error">End date is required</span>
       }
     </div>
@@ -112,12 +89,5 @@
     @if (overlapError) {
       <div class="alert alert--error">{{ overlapError }}</div>
     }
-
-    <div class="panel__footer">
-      <button type="button" class="btn btn--ghost" (click)="onCancel()">Cancel</button>
-      <button type="submit" class="btn btn--primary" [disabled]="saving()">
-        {{ saving() ? 'Saving…' : submitLabel }}
-      </button>
-    </div>
   </form>
 </aside>

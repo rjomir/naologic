@@ -3,6 +3,7 @@ import {
   ViewChild,
   ElementRef,
   AfterViewInit,
+  HostListener,
   ChangeDetectionStrategy,
   signal,
   computed,
@@ -19,10 +20,12 @@ import { anchorZoom, pxToMs } from './utils/viewport.utils';
 import { getBarSize, type BarSize } from './utils/activity-size.model';
 import type { PanelMode, WorkOrderDocument, TimelineColumn } from '../models/types';
 
-const PX_PER_DAY_PRESETS = { day: 50, week: 20, month: 6 } as const;
+const PX_PER_DAY_PRESETS = { hour: 1440, day: 50, week: 20, month: 5 } as const;
 type ZoomPreset = keyof typeof PX_PER_DAY_PRESETS;
-const INITIAL_DAYS_BEFORE = 30;
-const INITIAL_DAYS_AFTER = 90;
+const INITIAL_DAYS_BEFORE = 90;
+const INITIAL_DAYS_AFTER = 270;
+const HOUR_DAYS_BEFORE = 1;
+const HOUR_DAYS_AFTER = 2;
 const LEFT_COL_PX = 220;
 /** How far from the edge (px) before we expand the timeline. */
 const SCROLL_EXPAND_THRESHOLD = 300;
@@ -52,9 +55,36 @@ export class TimelineComponent implements AfterViewInit {
   today = new Date();
   hoveredRow: string | null = null;
 
-  pixelsPerDay = signal<number>(PX_PER_DAY_PRESETS.day);
-  zoomLevelValue: ZoomPreset = 'day';
+  tooltipX = signal(0);
+  tooltipY = signal(0);
+  showClickTooltip = signal(false);
+  ghostBarX = signal(-1);
+
+  onGridMouseMove(event: MouseEvent): void {
+    if ((event.target as HTMLElement).closest('app-work-order-bar')) {
+      this.showClickTooltip.set(false);
+      this.ghostBarX.set(-1);
+      return;
+    }
+    this.tooltipX.set(event.clientX);
+    this.tooltipY.set(event.clientY);
+    this.showClickTooltip.set(true);
+
+    const el = this.scrollContainer.nativeElement;
+    const rect = el.getBoundingClientRect();
+    this.ghostBarX.set(el.scrollLeft + event.clientX - rect.left - LEFT_COL_PX);
+  }
+
+  onGridMouseLeave(): void {
+    this.showClickTooltip.set(false);
+    this.ghostBarX.set(-1);
+  }
+
+  pixelsPerDay = signal<number>(PX_PER_DAY_PRESETS.month);
+  zoomLevelValue: ZoomPreset = 'month';
+  private readonly zoomPreset = signal<ZoomPreset>('month');
   zoomOptions: { value: ZoomPreset; label: string }[] = [
+    { value: 'hour', label: 'Hour' },
     { value: 'day', label: 'Day' },
     { value: 'week', label: 'Week' },
     { value: 'month', label: 'Month' },
@@ -65,6 +95,7 @@ export class TimelineComponent implements AfterViewInit {
   private readonly daysAfterToday = signal(INITIAL_DAYS_AFTER);
   /** Prevent concurrent left-edge expansions from fighting each other. */
   private expanding = false;
+  private readonly viewportWidth = signal(0);
 
   readonly totalDays = computed(() => this.daysBeforeToday() + this.daysAfterToday());
 
@@ -93,11 +124,24 @@ export class TimelineComponent implements AfterViewInit {
   readonly majorNotches = computed<TimelineNotch[]>(() => {
     const cols = this.columns();
     if (!cols.length) return [];
+    const vw = this.viewportWidth();
     return computeNotches(
       cols[0].date.getTime(),
       cols[cols.length - 1].date.getTime() + 86_400_000,
       this.totalWidth(),
+      vw > 0 ? vw : undefined,
+      this.zoomPreset(),
     );
+  });
+
+  readonly currentPeriodLabel = computed(() => {
+    const labels: Record<ZoomPreset, string> = {
+      hour: 'Current hour',
+      day: 'Today',
+      week: 'Current week',
+      month: 'Current month',
+    };
+    return labels[this.zoomPreset()];
   });
 
   getNotchLeft(notch: TimelineNotch): number {
@@ -113,12 +157,27 @@ export class TimelineComponent implements AfterViewInit {
   reflowResult = signal<string | null>(null);
 
   ngAfterViewInit(): void {
+    this.updateViewportWidth();
     this.scrollToToday();
+  }
+
+  @HostListener('window:resize')
+  updateViewportWidth(): void {
+    const el = this.scrollContainer?.nativeElement;
+    if (el) this.viewportWidth.set(el.clientWidth - LEFT_COL_PX);
   }
 
   onZoomChange(zoom: ZoomPreset): void {
     this.zoomLevelValue = zoom;
+    this.zoomPreset.set(zoom);
     this.pixelsPerDay.set(PX_PER_DAY_PRESETS[zoom]);
+    if (zoom === 'hour') {
+      this.daysBeforeToday.set(HOUR_DAYS_BEFORE);
+      this.daysAfterToday.set(HOUR_DAYS_AFTER);
+    } else {
+      this.daysBeforeToday.set(INITIAL_DAYS_BEFORE);
+      this.daysAfterToday.set(INITIAL_DAYS_AFTER);
+    }
     setTimeout(() => this.scrollToToday(), 0);
   }
 
@@ -188,7 +247,7 @@ export class TimelineComponent implements AfterViewInit {
   }
 
   private syncZoomLabel(p: number): void {
-    this.zoomLevelValue = p >= 30 ? 'day' : p >= 10 ? 'week' : 'month';
+    this.zoomLevelValue = p >= 80 ? 'hour' : p >= 30 ? 'day' : p >= 10 ? 'week' : 'month';
   }
 
   dateToPx(date: Date, from: Date): number {
@@ -224,22 +283,33 @@ export class TimelineComponent implements AfterViewInit {
   }
 
   getBarSizeFor(wo: WorkOrderDocument): BarSize {
-    return getBarSize(parseFloat(this.getBarStyle(wo)['width']), this.totalWidth());
+    return getBarSize(parseFloat(this.getBarStyle(wo)['width']));
   }
 
   getOrdersForWc(wcId: string): WorkOrderDocument[] {
     return this.woService.getOrdersForWorkCenter(wcId);
   }
 
+  isCurrentPeriod(notch: TimelineNotch): boolean {
+    const now = this.today.getTime();
+    const start = notch.date.getTime();
+    return now >= start && now < start + notch.spanMs;
+  }
+
   onRowClick(event: Event, wcId: string): void {
-    if ((event.target as HTMLElement).closest('app-work-order-bar')) return;
     if (!(event instanceof MouseEvent)) return;
+    const target = event.target as HTMLElement;
+    // Guard 1: direct click on left column (unscrolled state — element is in normal flow)
+    if (target.closest('.left-col')) return;
+    // Guard 2: bar click — handled by the bar component itself
+    if (target.closest('app-work-order-bar')) return;
     const el = this.scrollContainer.nativeElement;
     const rect = el.getBoundingClientRect();
-    this.openCreatePanel(
-      wcId,
-      this.pxToLocalDateStr(event.clientX - rect.left - LEFT_COL_PX + el.scrollLeft),
-    );
+    // Guard 3: sticky left-col visual overlap (scrolled state — sticky element's layout
+    // box is off-screen, so browser dispatches clicks to the grid-area behind it)
+    const viewportX = event.clientX - rect.left;
+    if (viewportX < LEFT_COL_PX) return;
+    this.openCreatePanel(wcId, this.pxToLocalDateStr(viewportX - LEFT_COL_PX + el.scrollLeft));
   }
 
   openCreatePanel(wcId: string, d: string): void {
@@ -280,7 +350,9 @@ export class TimelineComponent implements AfterViewInit {
         this.reflowResult.set('Schedule is already valid — no changes needed.');
       } else {
         const delayStr =
-          r.totalDelayMinutes > 0 ? ` Total delay: +${r.totalDelayMinutes} min.` : '';
+          r.totalDelayMinutes > 0
+            ? ` Total delay: +${this.humanizeMinutes(r.totalDelayMinutes)}.`
+            : '';
         this.reflowResult.set(
           `Reflow complete: ${r.updatedCount} order(s) rescheduled.${delayStr}`,
         );
@@ -290,6 +362,15 @@ export class TimelineComponent implements AfterViewInit {
     } finally {
       this.reflowing.set(false);
     }
+  }
+
+  private humanizeMinutes(minutes: number): string {
+    const d = Math.floor(minutes / 1440);
+    const h = Math.floor((minutes % 1440) / 60);
+    const m = Math.round(minutes % 60);
+    if (d > 0) return h > 0 ? `${d}d ${h}h` : `${d}d`;
+    if (h > 0) return m > 0 ? `${h}h ${m}min` : `${h}h`;
+    return `${m}min`;
   }
 
   goToToday(): void {

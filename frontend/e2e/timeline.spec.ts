@@ -17,7 +17,8 @@ const WO1 = {
     workCenterId: 'wc-1',
     status: 'in-progress',
     startDate: fmt(addDays(today, -2)),
-    endDate: fmt(addDays(today, 5)),
+    // 27-day span → 135 px at month zoom (5 px/day) → 'md' bar size → menu button visible
+    endDate: fmt(addDays(today, 25)),
   },
 };
 
@@ -144,7 +145,7 @@ test.describe('Timeline happy flow', () => {
       position: { x: 300, y: 28 },
     });
     await expect(page.locator('.panel')).toBeVisible();
-    await expect(page.locator('[formcontrolname="startDate"]')).not.toHaveValue('');
+    await expect(page.locator('#wo-start-dt')).not.toHaveValue('');
   });
 
   test('clicking the backdrop closes the panel', async ({ page }) => {
@@ -312,5 +313,68 @@ test.describe('Timeline happy flow', () => {
 
     const finalScrollWidth = await scrollContainer.evaluate(el => el.scrollWidth);
     expect(finalScrollWidth).toBeGreaterThan(initialScrollWidth);
+  });
+
+  test('hovering over a row highlights it', async ({ page }) => {
+    await setup(page);
+    const row = page.locator('.timeline-row').nth(0);
+    await row.hover();
+    await expect(row).toHaveClass(/timeline-row--hovered/);
+  });
+
+  test('datetime picker shows popover with calendar and time selectors', async ({ page }) => {
+    await setup(page);
+    // Open the create panel on an empty row
+    await page.locator('.timeline-row').nth(1).locator('.grid-area').click({
+      position: { x: 300, y: 28 },
+    });
+    await expect(page.locator('.panel')).toBeVisible({ timeout: 5_000 });
+
+    // Click the start-date input to open the popover
+    await page.locator('#wo-start-dt').click();
+
+    // ngb-datepicker and the time row should both appear inside the popover
+    await expect(page.locator('ngb-datepicker').first()).toBeVisible({ timeout: 3_000 });
+    await expect(page.locator('.dt-popover__time')).toBeVisible();
+
+    // Dismiss via the Done button
+    await page.locator('.dt-popover__done').click();
+    await expect(page.locator('ngb-datepicker').first()).not.toBeVisible({ timeout: 3_000 });
+  });
+
+  test('overlap detection keeps panel open and shows error', async ({ page }) => {
+    await setup(page);
+
+    // Click on wc-1's grid area well before the bar (bar starts at ~440 px from grid-area left)
+    await page.locator('.timeline-row').nth(0).locator('.grid-area').click({
+      position: { x: 10, y: 28 },
+    });
+    await expect(page.locator('.panel')).toBeVisible({ timeout: 5_000 });
+    await page.fill('#wo-name', 'Overlap Test Order');
+
+    // Inject dates that overlap WO1 (today-2 to today+25) via the Angular dev-mode API
+    const tomorrow = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
+    const twoWeeks = new Date(Date.now() + 14 * 86_400_000).toISOString().slice(0, 10);
+
+    await page.evaluate(
+      ({ start, end }: { start: string; end: string }) => {
+        const ng = (window as any).ng;
+        if (!ng) return;
+        const el = document.querySelector('app-work-order-panel');
+        if (!el) return;
+        const cmp = ng.getComponent(el);
+        if (!cmp?.form) return;
+        cmp.form.patchValue({ startDatetime: start, endDatetime: end });
+        ng.applyChanges(cmp);
+      },
+      { start: `${tomorrow}T08:00:00`, end: `${twoWeeks}T17:00:00` },
+    );
+
+    await page.locator('.btn--primary').click();
+
+    // Panel stays open with an overlap error message
+    await expect(page.locator('.panel')).toBeVisible({ timeout: 3_000 });
+    await expect(page.locator('.alert--error')).toBeVisible({ timeout: 3_000 });
+    await expect(page.locator('.alert--error')).toContainText('Overlaps with');
   });
 });

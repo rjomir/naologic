@@ -1,4 +1,10 @@
-<div class="timeline-wrapper">
+<div class="page-wrapper">
+  <!-- Navigation bar -->
+  <nav class="app-nav">
+    <span class="app-logo"><span class="app-logo__bold">NAO</span><span class="app-logo__light">LOGIC</span></span>
+  </nav>
+
+  <!-- Status banners -->
   @if (woService.loading()) {
     <div class="banner banner--info">Loading data from API…</div>
   }
@@ -12,29 +18,36 @@
     </div>
   }
 
-  <div class="toolbar">
-    <h1 class="toolbar__title">Work Orders</h1>
-    <div class="toolbar__right">
+  <!-- Page heading -->
+  <div class="page-header">
+    <h1 class="page-title">Work Orders</h1>
+  </div>
+
+  <!-- Controls bar -->
+  <div class="controls-bar">
+    <div class="view-controls">
+      <span class="view-label">Timescale</span>
+      <ng-select
+        class="zoom-select"
+        appendTo="body"
+        [items]="zoomOptions"
+        bindValue="value"
+        bindLabel="label"
+        [(ngModel)]="zoomLevelValue"
+        [clearable]="false"
+        [searchable]="false"
+        (change)="onZoomChange($event.value)"
+      ></ng-select>
+    </div>
+    <div class="controls-right">
       <button class="today-btn" (click)="goToToday()">Today</button>
       <button class="reflow-btn" (click)="onReflow()" [disabled]="reflowing()">
         {{ reflowing() ? 'Reflowing…' : 'Run Reflow' }}
       </button>
-      <div class="zoom-select-wrap">
-        <span class="zoom-label">Timescale:</span>
-        <ng-select
-          class="zoom-select"
-          [items]="zoomOptions"
-          bindValue="value"
-          bindLabel="label"
-          [(ngModel)]="zoomLevelValue"
-          [clearable]="false"
-          [searchable]="false"
-          (change)="onZoomChange($event.value)"
-        ></ng-select>
-      </div>
     </div>
   </div>
 
+  <!-- Timeline -->
   <div
     class="timeline-scroll"
     #scrollContainer
@@ -47,13 +60,21 @@
       <div class="timeline-header">
         <div class="left-col left-col--header"><span>Work Center</span></div>
         <div class="grid-area grid-area--header" [style.width.px]="totalWidth()">
-          @for (notch of majorNotches(); track notch.key) {
-            <div class="notch-label" [style.left.px]="getNotchLeft(notch)" [style.width.px]="notch.widthPx">
-              {{ notch.label }}
-            </div>
-          }
           @if (todayOffset() >= 0) {
-            <div class="today-line" [style.left.px]="todayOffset()"></div>
+            <div class="today-line today-line--header" [style.left.px]="todayOffset()"></div>
+          }
+          @for (notch of majorNotches(); track notch.key) {
+            <div
+              class="notch-label"
+              [class.notch-label--current]="isCurrentPeriod(notch)"
+              [style.left.px]="getNotchLeft(notch)"
+              [style.width.px]="notch.widthPx"
+            >
+              @if (isCurrentPeriod(notch)) {
+                <span class="current-period-badge">{{ currentPeriodLabel() }}</span>
+              }
+              <span class="notch-label__text">{{ notch.label }}</span>
+            </div>
           }
         </div>
       </div>
@@ -73,12 +94,17 @@
           <div class="left-col">
             <span class="wc-name">{{ wc.data.name }}</span>
           </div>
-          <div class="grid-area" [style.width.px]="totalWidth()">
-            @for (col of columns(); track col.key) {
-              <div class="col-line" [style.width.px]="pixelsPerDay()"></div>
-            }
+          <div
+            class="grid-area"
+            [style.width.px]="totalWidth()"
+            (mousemove)="onGridMouseMove($event)"
+            (mouseleave)="onGridMouseLeave()"
+          >
             @if (todayOffset() >= 0) {
               <div class="today-line" [style.left.px]="todayOffset()"></div>
+            }
+            @for (notch of majorNotches(); track notch.key) {
+              <div class="col-line" [style.width.px]="notch.widthPx"></div>
             }
             @for (wo of getOrdersForWc(wc.docId); track wo.docId) {
               @if (getBarSizeFor(wo) !== 'hidden') {
@@ -91,12 +117,32 @@
                 ></app-work-order-bar>
               }
             }
+            @if (hoveredRow === wc.docId && ghostBarX() >= 0) {
+              <div class="ghost-bar" [style.left.px]="ghostBarX()"></div>
+            }
           </div>
         </div>
       }
+
+      <!-- Fill remaining height with grid lines -->
+      <div class="timeline-fill">
+        <div class="left-col"></div>
+        <div class="grid-area timeline-fill__grid" [style.width.px]="totalWidth()">
+          @if (todayOffset() >= 0) {
+            <div class="today-line" [style.left.px]="todayOffset()"></div>
+          }
+          @for (notch of majorNotches(); track notch.key) {
+            <div class="col-line" [style.width.px]="notch.widthPx"></div>
+          }
+        </div>
+      </div>
     </div>
   </div>
 </div>
+
+@if (showClickTooltip()) {
+  <div class="click-tooltip" [style.left.px]="tooltipX() + 14" [style.top.px]="tooltipY() + 14">Click to add dates</div>
+}
 
 @if (panelVisible()) {
   <app-work-order-panel

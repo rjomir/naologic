@@ -1,3 +1,4 @@
+@use "bootstrap/dist/css/bootstrap.min.css";
 @use "@ng-select/ng-select/themes/default.theme.css";
 
 *,
@@ -18,31 +19,39 @@ body {
     "Segoe UI",
     sans-serif;
   font-size: 14px;
-  color: #111827;
-  background: #f9fafb;
+  color: #030929;
+  background: #ffffff;
 }
 
 :root {
-  --color-open: #3b82f6;
-  --color-in-progress: #7c3aed;
-  --color-complete: #059669;
-  --color-blocked: #d97706;
+  /* Bootstrap variable overrides — must come before our tokens */
+  --bs-body-font-family: "Circular-Std", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --bs-body-color: #030929;
+  --bs-primary: #5659ff;
+  --bs-primary-rgb: 86, 89, 255;
+  --bs-border-color: #f0f1f5;
+  --bs-border-radius: 6px;
 
-  --color-open-bg: #eff6ff;
-  --color-in-progress-bg: #f5f3ff;
-  --color-complete-bg: #ecfdf5;
+  --color-open: #10b981;
+  --color-in-progress: #5659ff;
+  --color-complete: #22c55e;
+  --color-blocked: #f59e0b;
+
+  --color-open-bg: #f0fdf9;
+  --color-in-progress-bg: #eeeffe;
+  --color-complete-bg: #f0fdf4;
   --color-blocked-bg: #fffbeb;
 
   --left-col-width: 220px;
   --row-height: 56px;
-  --border-color: #e5e7eb;
+  --border-color: #f0f1f5;
   --header-bg: #ffffff;
-  --row-hover-bg: #f3f4f6;
+  --row-hover-bg: #eef0ff;
 }
 
 /* ng-select override */
 .ng-select .ng-select-container {
-  border-color: #d1d5db;
+  border-color: #d8dceb;
   border-radius: 6px;
   min-height: 36px;
   font-family: inherit;
@@ -50,14 +59,111 @@ body {
 }
 
 .ng-select.ng-select-focused .ng-select-container {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  border-color: #5659ff;
+  box-shadow: 0 0 0 3px rgba(86, 89, 255, 0.15);
 }
 
-/* ngb-datepicker light override */
+/* ── ngb-datepicker: themed to match app design ───────────────────────── */
 ngb-datepicker {
-  border-radius: 8px;
-  border: 1px solid #e5e7eb;
-  font-family: inherit;
+  font-family:
+    "Circular-Std",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif !important;
   font-size: 13px;
+  border: 1px solid #f0f1f5 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  color: #030929;
+
+  .ngb-dp-header {
+    background: #fff !important;
+    border-bottom: 1px solid #f0f1f5;
+    padding: 10px 8px;
+  }
+
+  /* Month / year dropdowns */
+  ngb-datepicker-navigation-select select {
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    color: #030929;
+    background: #f7f8fc;
+    border: 1px solid #f0f1f5;
+    border-radius: 4px;
+    padding: 2px 6px;
+    cursor: pointer;
+
+    &:focus {
+      outline: none;
+      border-color: #5659ff;
+      box-shadow: 0 0 0 2px rgba(86, 89, 255, 0.12);
+    }
+  }
+
+  /* Prev / next arrows */
+  .ngb-dp-arrow button {
+    color: #5659ff !important;
+    background: transparent !important;
+    border: none !important;
+    border-radius: 4px;
+
+    &:hover {
+      background: #eeeffe !important;
+    }
+    &:focus {
+      box-shadow: none !important;
+    }
+  }
+
+  /* Weekday labels */
+  .ngb-dp-weekday {
+    font-style: normal !important;
+    font-size: 11px;
+    font-weight: 600;
+    color: #687196;
+  }
+
+  /* Regular day buttons */
+  .btn-light {
+    font-family: inherit !important;
+    font-size: 12px !important;
+    color: #030929 !important;
+    background: transparent !important;
+    border: none !important;
+    border-radius: 4px !important;
+
+    &:hover {
+      background: #eeeffe !important;
+      color: #5659ff !important;
+    }
+    &:focus {
+      box-shadow: none !important;
+    }
+  }
+
+  /* Selected day — ng-bootstrap adds .bg-primary.text-white to .btn-light */
+  .btn-light.bg-primary,
+  .btn-primary {
+    font-family: inherit !important;
+    font-size: 12px !important;
+    background-color: #5659ff !important;
+    border-color: #5659ff !important;
+    color: #fff !important;
+    border-radius: 4px !important;
+
+    &:hover {
+      background-color: #3e40db !important;
+    }
+    &:focus {
+      box-shadow: none !important;
+    }
+  }
+
+  /* Days outside current month */
+  .text-muted {
+    color: #c0c4d6 !important;
+  }
 }

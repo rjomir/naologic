@@ -80,16 +80,52 @@ async function main() {
   });
 
   // ── Work Orders ───────────────────────────────────────────────────────────
-  const woData = [
-    { docId: 'wo-001', woNumber: 'WO-001', name: 'Pipe Batch #A1',   wc: 'wc-extrusion-a', status: 'complete',    start: -10, end: -7  },
-    { docId: 'wo-002', woNumber: 'WO-002', name: 'Pipe Batch #A2',   wc: 'wc-extrusion-a', status: 'in-progress', start: -3,  end: 4   },
-    { docId: 'wo-003', woNumber: 'WO-003', name: 'Shaft Milling',    wc: 'wc-cnc-1',       status: 'complete',    start: -8,  end: -5  },
-    { docId: 'wo-004', woNumber: 'WO-004', name: 'Coupling Finish',  wc: 'wc-cnc-1',       status: 'open',        start: 2,   end: 6   },
-    { docId: 'wo-005', woNumber: 'WO-005', name: 'Valve Assembly',   wc: 'wc-assembly',    status: 'in-progress', start: -2,  end: 3   },
-    { docId: 'wo-006', woNumber: 'WO-006', name: 'Bracket Assembly', wc: 'wc-assembly',    status: 'blocked',     start: 5,   end: 9   },
-    { docId: 'wo-007', woNumber: 'WO-007', name: 'Dimensional Check',wc: 'wc-quality',     status: 'complete',    start: -6,  end: -3  },
-    { docId: 'wo-008', woNumber: 'WO-008', name: 'Final Inspection', wc: 'wc-quality',     status: 'open',        start: 4,   end: 8   },
-    { docId: 'wo-009', woNumber: 'WO-009', name: 'Retail Pack Run',  wc: 'wc-packaging',   status: 'blocked',     start: -1,  end: 5   },
+  //
+  // Dependency chain (Scenario 1 — Delay Cascade):
+  //   wo-001 (Pipe Batch #A1)
+  //     └─► wo-003 (Shaft Milling) ──► wo-005 (Valve Assembly) ──► wo-007 (Dimensional Check)
+  //                                                                      └─► wo-008 (Final Inspection)
+  //                                                                               └─► wo-009 (Retail Pack Run)
+  //   wo-002 (Pipe Batch #A2) ──► wo-004 (Coupling Finish) ──► wo-006 (Bracket Assembly)
+  //
+  // wo-005 (Valve Assembly) also sits across the Assembly Station maintenance
+  // window (next Wednesday 10-12) — Scenario 2: Shift / Maintenance avoidance.
+  //
+  // Running Reflow will cascade wo-005's stale dates into wo-007 → wo-008 → wo-009.
+
+  type WoSeed = {
+    docId: string;
+    woNumber: string;
+    name: string;
+    wc: string;
+    status: string;
+    start: number;
+    end: number;
+    deps: string[];
+    setupTimeMinutes?: number;
+    isMaintenance?: boolean;
+  };
+
+  const woData: WoSeed[] = [
+    // ── Extrusion (no upstream deps) ────────────────────────────────────────
+    { docId: 'wo-001', woNumber: 'WO-001', name: 'Pipe Batch #A1',    wc: 'wc-extrusion-a', status: 'complete',    start: -75, end: -35, deps: [] },
+    { docId: 'wo-002', woNumber: 'WO-002', name: 'Pipe Batch #A2',    wc: 'wc-extrusion-a', status: 'in-progress', start: -20, end: 10,  deps: [] },
+
+    // ── CNC (depends on upstream extrusion batches) ──────────────────────────
+    { docId: 'wo-003', woNumber: 'WO-003', name: 'Shaft Milling',     wc: 'wc-cnc-1',       status: 'complete',    start: -34, end:  -5, deps: ['wo-001'], setupTimeMinutes: 30 },
+    { docId: 'wo-004', woNumber: 'WO-004', name: 'Coupling Finish',   wc: 'wc-cnc-1',       status: 'open',        start:  12, end:  40, deps: ['wo-002'], setupTimeMinutes: 20 },
+
+    // ── Assembly (depends on CNC; wo-005 intentionally starts too early ──────
+    //    so reflow must push it past wo-003's end AND the maintenance window)
+    { docId: 'wo-005', woNumber: 'WO-005', name: 'Valve Assembly',    wc: 'wc-assembly',    status: 'in-progress', start:  -8, end:  20, deps: ['wo-003'] },
+    { docId: 'wo-006', woNumber: 'WO-006', name: 'Bracket Assembly',  wc: 'wc-assembly',    status: 'open',        start:  42, end:  70, deps: ['wo-004'] },
+
+    // ── Quality Control (depends on assembly) ────────────────────────────────
+    { docId: 'wo-007', woNumber: 'WO-007', name: 'Dimensional Check', wc: 'wc-quality',     status: 'open',        start:  21, end:  35, deps: ['wo-005'] },
+    { docId: 'wo-008', woNumber: 'WO-008', name: 'Final Inspection',  wc: 'wc-quality',     status: 'open',        start:  36, end:  55, deps: ['wo-006', 'wo-007'] },
+
+    // ── Packaging (depends on both quality gates) ────────────────────────────
+    { docId: 'wo-009', woNumber: 'WO-009', name: 'Retail Pack Run',   wc: 'wc-packaging',   status: 'open',        start:  56, end:  85, deps: ['wo-008'] },
   ];
 
   for (const wo of woData) {
@@ -99,8 +135,16 @@ async function main() {
     const wc = wcMap.get(wo.wc)!;
 
     await prisma.workOrder.upsert({
-      where: { docId: wo.docId },
-      update: { name: wo.name, status: wo.status, startDate, endDate, durationMinutes },
+      where:  { docId: wo.docId },
+      update: {
+        name: wo.name,
+        status: wo.status,
+        startDate,
+        endDate,
+        durationMinutes,
+        setupTimeMinutes: wo.setupTimeMinutes ?? 0,
+        dependsOnWorkOrderIds: wo.deps,
+      },
       create: {
         docId: wo.docId,
         woNumber: wo.woNumber,
@@ -110,10 +154,10 @@ async function main() {
         startDate,
         endDate,
         durationMinutes,
-        setupTimeMinutes: 0,
-        isMaintenance: false,
+        setupTimeMinutes: wo.setupTimeMinutes ?? 0,
+        isMaintenance: wo.isMaintenance ?? false,
         status: wo.status,
-        dependsOnWorkOrderIds: [],
+        dependsOnWorkOrderIds: wo.deps,
       },
     });
   }

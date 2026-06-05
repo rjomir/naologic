@@ -1,6 +1,6 @@
 # Production Schedule Reflow – Backend
 
-A TypeScript algorithm that reschedules manufacturing work orders when disruptions occur, respecting dependencies, shift schedules, and maintenance windows.
+A TypeScript scheduling algorithm that reschedules manufacturing work orders when disruptions occur, respecting dependency chains, shift schedules, and maintenance windows. Exposed as an Express 5 REST API backed by Prisma + PostgreSQL.
 
 ## Setup
 
@@ -26,40 +26,49 @@ pnpm test:watch    # watch mode
 
 ## Algorithm Approach
 
-1. **Topological sort (Kahn's algorithm)** – orders work orders by dependency graph so parents are always scheduled before children. Independent nodes are sorted by original start date.
+1. **Topological sort (Kahn's algorithm)** – orders work orders by the dependency graph so every parent is always scheduled before its children. Independent nodes are sorted by original start date to preserve intent.
 
-2. **Per-work-center occupancy tracking** – a `wcLastEnd` map records the last scheduled end time per work center. Each order's earliest start = `max(all parent end dates, wcLastEnd)`.
+2. **Per-work-center occupancy tracking** – a `wcLastEnd` map records the latest scheduled end time for each work center. Each order's earliest start is `max(all parent end dates, wcLastEnd[workCenter])`.
 
-3. **Shift-aware end date calculation** – `calculateEndDate(start, durationMinutes, shifts, maintenanceWindows)` consumes `durationMinutes` of working time, pausing at shift boundaries and maintenance windows and resuming at the next valid moment.
+3. **Shift-aware end date calculation** – `calculateEndDate(start, durationMinutes, shifts, maintenanceWindows)` consumes working minutes only during valid shift hours, skipping nights, weekends, and maintenance windows.
 
-4. **Maintenance work orders are fixed** – `isMaintenance: true` orders are skipped during reflow. Maintenance windows in the work center's data block regular work orders from using those time slots.
+4. **Maintenance work orders are fixed** – orders with `isMaintenance: true` are skipped during reflow. Their time slots block other work orders from using those windows.
 
 ## Constraint Checking Order
 
 ```
-Dependencies → Work Center Conflicts → Shift Boundaries → Maintenance Windows
+Circular dependency detection → Topological sort → Dependency end dates
+  → Work center occupancy → Shift boundaries → Maintenance windows
 ```
 
-## Data
+## Demo Seed Data
 
-Three demonstration scenarios in `src/data/`:
+`prisma/seed.ts` builds a full manufacturing pipeline across 5 work centers:
 
-| Scenario       | Description                                                                                                |
-| -------------- | ---------------------------------------------------------------------------------------------------------- |
-| `scenario1.ts` | **Delay cascade** – WO-001 starts late, cascades through WO-002/WO-003 across a shift boundary             |
-| `scenario2.ts` | **Shift + maintenance** – maintenance order blocks work center; WO-B spans overnight                       |
-| `scenario3.ts` | **Multi-constraint** – different shifts, unplanned breakdown, resource conflict between independent orders |
+```
+Extrusion Line A  → wo-001 (complete), wo-002 (in-progress)
+CNC Machine 1     → wo-003 (complete, depends on wo-001)
+                    wo-004 (open,     depends on wo-002)
+Assembly Station  → wo-005 (in-progress, depends on wo-003) ← intentionally stale
+                    wo-006 (open,        depends on wo-004)
+Quality Control   → wo-007 (open, depends on wo-005)
+                    wo-008 (open, depends on wo-006 + wo-007)
+Packaging Line    → wo-009 (open, depends on wo-008)
+```
+
+`wo-005` starts before `wo-003` finishes and overlaps the Assembly Station maintenance window — making the **Delay Cascade** and **Maintenance Avoidance** scenarios immediately demonstrable via "Run Reflow".
 
 ## Stack
 
-- **TypeScript** with strict mode (`^6.0`, ESM)
+- **TypeScript** with strict mode (`^6.0`, ESM modules)
 - **Express 5** — REST API server on :3000
 - **Prisma 6 + PostgreSQL 16** — persistence layer
-- **Luxon** for all date manipulation (UTC throughout)
+- **Luxon** — all date manipulation (UTC throughout)
+- **Zod + @asteasolutions/zod-to-openapi** — type-safe schema + OpenAPI 3.1 spec generation
 - **helmet** — hardened HTTP response headers
-- **express-rate-limit** — 100 req/min general, 10 req/min reflow
-- **Vitest** for tests
-- **tsx** for running TypeScript directly
+- **express-rate-limit** — 100 req/min general, 10 req/min on the reflow endpoint
+- **Vitest** — unit test runner
+- **tsx** — runs TypeScript directly without a build step
 
 ## API
 
@@ -74,10 +83,12 @@ Three demonstration scenarios in `src/data/`:
 | GET    | `/api/events`             | SSE stream (real-time sync) |
 | GET    | `/api/health`             | Health check                |
 | GET    | `/api/docs`               | Swagger UI                  |
-| GET    | `/api/docs.json`          | Raw OpenAPI spec            |
+| GET    | `/api/docs.json`          | Raw OpenAPI 3.1 spec        |
 
 ## Key Design Decisions
 
-- All dates stored and processed in **UTC** to avoid daylight saving issues.
-- `durationMinutes` is the authoritative duration source — `endDate` in input data may be stale; reflow always recalculates it.
-- The algorithm is **greedy** (schedule each order as early as possible). For minimizing total delay this is near-optimal when processing in dependency order.
+- All dates stored and processed in **UTC** to avoid daylight-saving issues.
+- `durationMinutes` is the authoritative duration source — `endDate` in input data may be stale; reflow always recalculates it from duration.
+- The algorithm is **greedy** (schedule each order as early as valid). For minimising total delay this is near-optimal when processing in dependency order.
+- SSE is used for real-time sync instead of WebSockets because it requires no extra protocol negotiation and is natively supported by all modern browsers.
+- OpenAPI spec is built from Zod schemas at startup so the API contract and runtime validation are always in sync.
