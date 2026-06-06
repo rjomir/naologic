@@ -4,6 +4,7 @@
   "description": "Production schedule reflow algorithm for manufacturing ERP",
   "type": "module",
   "scripts": {
+    "postinstall": "prisma generate",
     "start": "tsx src/server.ts",
     "cli": "tsx src/cli.ts",
     "test": "vitest run",
