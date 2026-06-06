@@ -22,7 +22,7 @@ pnpm test          # run once
 pnpm test:watch    # watch mode
 ```
 
-12 tests covering: shift boundary spanning, maintenance window avoidance, dependency cascades, circular dependency detection, work center conflict resolution.
+49 tests across 3 files covering: shift boundary spanning, maintenance window avoidance, dependency cascades, circular dependency detection, work center conflict resolution, setup time handling, delay metrics, utilization metrics, work order CRUD service logic.
 
 ## Algorithm Approach
 
@@ -50,7 +50,7 @@ Extrusion Line A  → wo-001 (complete), wo-002 (in-progress)
 CNC Machine 1     → wo-003 (complete, depends on wo-001)
                     wo-004 (open,     depends on wo-002)
 Assembly Station  → wo-005 (in-progress, depends on wo-003) ← intentionally stale
-                    wo-006 (open,        depends on wo-004)
+                    wo-006 (blocked,     depends on wo-004)
 Quality Control   → wo-007 (open, depends on wo-005)
                     wo-008 (open, depends on wo-006 + wo-007)
 Packaging Line    → wo-009 (open, depends on wo-008)

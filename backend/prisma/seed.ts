@@ -118,7 +118,7 @@ async function main() {
     // ── Assembly (depends on CNC; wo-005 intentionally starts too early ──────
     //    so reflow must push it past wo-003's end AND the maintenance window)
     { docId: 'wo-005', woNumber: 'WO-005', name: 'Valve Assembly',    wc: 'wc-assembly',    status: 'in-progress', start:  -8, end:  20, deps: ['wo-003'] },
-    { docId: 'wo-006', woNumber: 'WO-006', name: 'Bracket Assembly',  wc: 'wc-assembly',    status: 'open',        start:  42, end:  70, deps: ['wo-004'] },
+    { docId: 'wo-006', woNumber: 'WO-006', name: 'Bracket Assembly',  wc: 'wc-assembly',    status: 'blocked',     start:  42, end:  70, deps: ['wo-004'] },
 
     // ── Quality Control (depends on assembly) ────────────────────────────────
     { docId: 'wo-007', woNumber: 'WO-007', name: 'Dimensional Check', wc: 'wc-quality',     status: 'open',        start:  21, end:  35, deps: ['wo-005'] },

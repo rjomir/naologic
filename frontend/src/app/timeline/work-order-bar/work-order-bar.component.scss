@@ -24,7 +24,7 @@
 
   &--open {
     background: var(--color-open-bg);
-    border: 1px solid rgba(16, 185, 129, 0.2);
+    border: 1px solid rgba(59, 130, 246, 0.2);
   }
   &--in-progress {
     background: var(--color-in-progress-bg);
@@ -75,7 +75,7 @@
   flex-shrink: 0;
 
   &.badge--open {
-    background: rgba(16, 185, 129, 0.2);
+    background: rgba(59, 130, 246, 0.15);
     color: var(--color-open);
   }
   &.badge--in-progress {

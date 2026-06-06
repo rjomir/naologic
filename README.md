@@ -68,7 +68,7 @@ naologic/
 │
 ├── backend/                         # TypeScript reflow algorithm + REST API
 │   ├── src/
-│   │   ├── reflow/                  # Scheduling algorithm + Vitest tests (12)
+│   │   ├── reflow/                  # Scheduling algorithm + Vitest tests (49)
 │   │   ├── utils/date-utils.ts      # Shift-aware date helpers (Luxon)
 │   │   ├── sse/                     # SSE client registry + broadcast
 │   │   ├── middleware/              # helmet, express-rate-limit
@@ -95,7 +95,7 @@ All root scripts delegate to the relevant workspace.
 | ------------------- | ------------------------------------------------- |
 | `pnpm dev`          | Start Angular frontend dev server on :4200        |
 | `pnpm be`           | Start Express REST API on :3000                   |
-| `pnpm be:test`      | Run backend Vitest suite (12 tests)               |
+| `pnpm be:test`      | Run backend Vitest suite (49 tests, 3 files)      |
 | `pnpm test:e2e`     | Run Playwright E2E tests (auto-starts dev server) |
 | `pnpm lint`         | ESLint across both projects                       |
 | `pnpm lint:fix`     | ESLint with auto-fix                              |

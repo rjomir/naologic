@@ -15,7 +15,7 @@ backend/    → Express REST API + Prisma + PostgreSQL (:3000)
 pnpm install          # install all workspaces
 pnpm dev              # frontend dev server
 pnpm be               # backend (tsx src/server.ts)
-pnpm be:test          # vitest suite (12 tests)
+pnpm be:test          # vitest suite (49 tests)
 docker compose up --build   # full stack via Docker
 ```
 
