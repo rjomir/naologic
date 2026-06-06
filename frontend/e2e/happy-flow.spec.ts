@@ -239,8 +239,7 @@ async function setupMock(page: Page, opts: MockOptions = {}): Promise<void> {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 /** Locates the timeline row for a given work center name */
-const wcRow = (page: Page, name: string) =>
-  page.locator(`[aria-label="${name} work center row"]`);
+const wcRow = (page: Page, name: string) => page.locator(`[aria-label="${name} work center row"]`);
 
 /**
  * Locates the `.bar` div for a given work order name via its aria-label.
@@ -248,8 +247,7 @@ const wcRow = (page: Page, name: string) =>
  * the `.bar__name` span, which can be visually hidden on narrow sm-sized bars
  * due to the parent's `overflow: hidden`.
  */
-const barByName = (page: Page, name: string) =>
-  page.locator(`.bar[aria-label^="${name}"]`);
+const barByName = (page: Page, name: string) => page.locator(`.bar[aria-label^="${name}"]`);
 
 // ── Suite: App renders correctly ─────────────────────────────────────────────
 
@@ -304,175 +302,176 @@ test.describe('App renders correctly', () => {
 // ── Suite: Full lifecycle ─────────────────────────────────────────────────────
 
 test.describe('Full lifecycle — create, edit, reflow, delete', () => {
-  test(
-    'creates a work order, verifies it, checks tooltip, edits it, runs reflow, then deletes it',
-    async ({ page }, testInfo) => {
-      // Helper: attach a labelled screenshot to the Playwright HTML report
-      const snap = async (label: string) =>
-        testInfo.attach(label, {
-          body: await page.screenshot({ fullPage: false }),
-          contentType: 'image/png',
-        });
-
-      // ── Step 1: Load app with baseline orders ───────────────────────────────
-      await test.step('load app with baseline orders', async () => {
-        await setupMock(page);
-        await expect(page.locator('.page-title')).toHaveText('Work Orders');
-        await snap('01-initial-state');
+  test('creates a work order, verifies it, checks tooltip, edits it, runs reflow, then deletes it', async ({
+    page,
+  }, testInfo) => {
+    // Helper: attach a labelled screenshot to the Playwright HTML report
+    const snap = async (label: string) =>
+      testInfo.attach(label, {
+        body: await page.screenshot({ fullPage: false }),
+        contentType: 'image/png',
       });
 
-      // ── Step 2: Open create panel by clicking Packaging Line row ────────────
-      await test.step('click empty row to open create panel', async () => {
-        // Packaging Line has no baseline orders — safe to click anywhere
-        await wcRow(page, 'Packaging Line').locator('.grid-area').click({
+    // ── Step 1: Load app with baseline orders ───────────────────────────────
+    await test.step('load app with baseline orders', async () => {
+      await setupMock(page);
+      await expect(page.locator('.page-title')).toHaveText('Work Orders');
+      await snap('01-initial-state');
+    });
+
+    // ── Step 2: Open create panel by clicking Packaging Line row ────────────
+    await test.step('click empty row to open create panel', async () => {
+      // Packaging Line has no baseline orders — safe to click anywhere
+      await wcRow(page, 'Packaging Line')
+        .locator('.grid-area')
+        .click({
           // x=600 → today+30 days at month zoom (5 px/day, 90 days before today)
           position: { x: 600, y: 28 },
         });
 
-        await expect(page.locator('.panel')).toBeVisible({ timeout: 5_000 });
-        await expect(page.locator('.panel__title')).toHaveText('Work Order Details');
+      await expect(page.locator('.panel')).toBeVisible({ timeout: 5_000 });
+      await expect(page.locator('.panel__title')).toHaveText('Work Order Details');
 
-        // Start date pre-filled from click position
-        await expect(page.locator('#wo-start-dt')).not.toHaveValue('');
+      // Start date pre-filled from click position
+      await expect(page.locator('#wo-start-dt')).not.toHaveValue('');
 
-        // Status defaults to Open
-        await expect(page.locator('ng-select[formcontrolname="status"]')).toContainText('Open');
+      // Status defaults to Open
+      await expect(page.locator('ng-select[formcontrolname="status"]')).toContainText('Open');
 
-        await snap('02-create-panel-open');
+      await snap('02-create-panel-open');
+    });
+
+    // ── Step 3: Fill in name and submit ─────────────────────────────────────
+    await test.step('fill name and create the work order', async () => {
+      await page.fill('#wo-name', 'E2E Lifecycle Order');
+
+      // Verify submit button says "Create" in create mode
+      await expect(page.locator('.btn--primary')).toHaveText('Create');
+
+      await page.locator('.btn--primary').click();
+      await expect(page.locator('.panel')).not.toBeVisible({ timeout: 5_000 });
+    });
+
+    // ── Step 4: Verify the new bar appears on the timeline ──────────────────
+    await test.step('verify new work order bar is visible', async () => {
+      // Wait for Angular to update the signal and re-render the bar.
+      // Use the aria-label selector (always set, always visible) instead of
+      // .bar__name which can be clipped to zero-width on narrow sm bars.
+      await expect(barByName(page, 'E2E Lifecycle Order')).toBeVisible({ timeout: 5_000 });
+
+      await snap('03-work-order-created');
+    });
+
+    // ── Step 5: Hover over bar to see tooltip ───────────────────────────────
+    await test.step('hover bar to verify tooltip content', async () => {
+      const newBar = barByName(page, 'E2E Lifecycle Order');
+      await newBar.scrollIntoViewIfNeeded();
+      await newBar.hover();
+
+      // Tooltip appears after 200 ms — wait for it
+      await expect(page.locator('.bar__tooltip')).toBeVisible({ timeout: 2_000 });
+      await expect(page.locator('.bar__tooltip-name')).toHaveText('E2E Lifecycle Order');
+      // Tooltip shows the date range and status
+      await expect(page.locator('.bar__tooltip-meta')).toBeVisible();
+      await expect(page.locator('.bar__tooltip-status')).toBeVisible();
+
+      await snap('04-tooltip-visible');
+
+      // Move mouse away to dismiss tooltip
+      await page.mouse.move(0, 0);
+    });
+
+    // ── Step 6: Edit the work order ─────────────────────────────────────────
+    await test.step('open three-dot menu and click Edit', async () => {
+      const newBar = barByName(page, 'E2E Lifecycle Order');
+      await newBar.scrollIntoViewIfNeeded();
+
+      const menuBtn = newBar.locator('.bar__menu-btn');
+      await menuBtn.click({ force: true });
+
+      await expect(page.locator('.bar__dropdown')).toBeVisible({ timeout: 3_000 });
+      await expect(page.locator('.dropdown-item').filter({ hasText: 'Edit' })).toBeVisible();
+      await expect(
+        page.locator('.dropdown-item--danger').filter({ hasText: 'Delete' }),
+      ).toBeVisible();
+
+      await snap('05-dropdown-open');
+
+      await page.locator('.dropdown-item').filter({ hasText: 'Edit' }).click();
+
+      await expect(page.locator('.panel')).toBeVisible({ timeout: 5_000 });
+
+      // Panel pre-populated with existing name
+      await expect(page.locator('#wo-name')).toHaveValue('E2E Lifecycle Order');
+
+      // Submit button says "Save" in edit mode
+      await expect(page.locator('.btn--primary')).toHaveText('Save');
+
+      await snap('06-edit-panel-prepopulated');
+    });
+
+    await test.step('change name and save', async () => {
+      await page.fill('#wo-name', 'E2E Lifecycle Order (Edited)');
+      await page.locator('.btn--primary').click();
+
+      await expect(page.locator('.panel')).not.toBeVisible({ timeout: 5_000 });
+
+      // Bar aria-label updates when the signal refreshes
+      await expect(barByName(page, 'E2E Lifecycle Order (Edited)')).toBeVisible({
+        timeout: 5_000,
       });
 
-      // ── Step 3: Fill in name and submit ─────────────────────────────────────
-      await test.step('fill name and create the work order', async () => {
-        await page.fill('#wo-name', 'E2E Lifecycle Order');
+      await snap('07-after-edit');
+    });
 
-        // Verify submit button says "Create" in create mode
-        await expect(page.locator('.btn--primary')).toHaveText('Create');
+    // ── Step 7: Run Reflow ───────────────────────────────────────────────────
+    await test.step('run reflow and verify result banner', async () => {
+      await page.locator('.reflow-btn').click();
 
-        await page.locator('.btn--primary').click();
-        await expect(page.locator('.panel')).not.toBeVisible({ timeout: 5_000 });
-      });
+      // Banner appears with the rescheduled count and delay
+      await expect(page.locator('.banner--success')).toBeVisible({ timeout: 8_000 });
+      await expect(page.locator('.banner--success')).toContainText(
+        'Reflow complete: 2 order(s) rescheduled',
+      );
+      await expect(page.locator('.banner--success')).toContainText('Total delay: +16h');
 
-      // ── Step 4: Verify the new bar appears on the timeline ──────────────────
-      await test.step('verify new work order bar is visible', async () => {
-        // Wait for Angular to update the signal and re-render the bar.
-        // Use the aria-label selector (always set, always visible) instead of
-        // .bar__name which can be clipped to zero-width on narrow sm bars.
-        await expect(barByName(page, 'E2E Lifecycle Order')).toBeVisible({ timeout: 5_000 });
+      await snap('08-reflow-banner');
 
-        await snap('03-work-order-created');
-      });
+      // Dismiss the banner
+      await page.locator('.banner__close-btn').click();
+      await expect(page.locator('.banner--success')).not.toBeVisible({ timeout: 3_000 });
 
-      // ── Step 5: Hover over bar to see tooltip ───────────────────────────────
-      await test.step('hover bar to verify tooltip content', async () => {
-        const newBar = barByName(page, 'E2E Lifecycle Order');
-        await newBar.scrollIntoViewIfNeeded();
-        await newBar.hover();
+      await snap('09-banner-dismissed');
+    });
 
-        // Tooltip appears after 200 ms — wait for it
-        await expect(page.locator('.bar__tooltip')).toBeVisible({ timeout: 2_000 });
-        await expect(page.locator('.bar__tooltip-name')).toHaveText('E2E Lifecycle Order');
-        // Tooltip shows the date range and status
-        await expect(page.locator('.bar__tooltip-meta')).toBeVisible();
-        await expect(page.locator('.bar__tooltip-status')).toBeVisible();
+    // ── Step 8: Delete the created work order ────────────────────────────────
+    await test.step('delete the work order via three-dot menu', async () => {
+      const editedBar = barByName(page, 'E2E Lifecycle Order (Edited)');
+      await editedBar.scrollIntoViewIfNeeded();
 
-        await snap('04-tooltip-visible');
+      const menuBtn = editedBar.locator('.bar__menu-btn');
+      await menuBtn.click({ force: true });
 
-        // Move mouse away to dismiss tooltip
-        await page.mouse.move(0, 0);
-      });
+      await expect(page.locator('.bar__dropdown')).toBeVisible({ timeout: 3_000 });
+      await page.locator('.dropdown-item--danger').filter({ hasText: 'Delete' }).click();
 
-      // ── Step 6: Edit the work order ─────────────────────────────────────────
-      await test.step('open three-dot menu and click Edit', async () => {
-        const newBar = barByName(page, 'E2E Lifecycle Order');
-        await newBar.scrollIntoViewIfNeeded();
+      // Bar should be removed from the DOM
+      await expect(
+        page.locator('.bar__name').filter({ hasText: 'E2E Lifecycle Order (Edited)' }),
+      ).not.toBeAttached({ timeout: 5_000 });
 
-        const menuBtn = newBar.locator('.bar__menu-btn');
-        await menuBtn.click({ force: true });
+      await snap('10-after-delete');
+    });
 
-        await expect(page.locator('.bar__dropdown')).toBeVisible({ timeout: 3_000 });
-        await expect(page.locator('.dropdown-item').filter({ hasText: 'Edit' })).toBeVisible();
-        await expect(
-          page.locator('.dropdown-item--danger').filter({ hasText: 'Delete' }),
-        ).toBeVisible();
+    // ── Step 9: Verify baseline orders still intact ─────────────────────────
+    await test.step('verify baseline orders are unaffected', async () => {
+      await expect(barByName(page, 'Open Order Alpha')).toBeAttached();
+      await expect(barByName(page, 'In-Progress Batch')).toBeAttached();
+      await expect(barByName(page, 'Blocked Job')).toBeAttached();
 
-        await snap('05-dropdown-open');
-
-        await page.locator('.dropdown-item').filter({ hasText: 'Edit' }).click();
-
-        await expect(page.locator('.panel')).toBeVisible({ timeout: 5_000 });
-
-        // Panel pre-populated with existing name
-        await expect(page.locator('#wo-name')).toHaveValue('E2E Lifecycle Order');
-
-        // Submit button says "Save" in edit mode
-        await expect(page.locator('.btn--primary')).toHaveText('Save');
-
-        await snap('06-edit-panel-prepopulated');
-      });
-
-      await test.step('change name and save', async () => {
-        await page.fill('#wo-name', 'E2E Lifecycle Order (Edited)');
-        await page.locator('.btn--primary').click();
-
-        await expect(page.locator('.panel')).not.toBeVisible({ timeout: 5_000 });
-
-        // Bar aria-label updates when the signal refreshes
-        await expect(barByName(page, 'E2E Lifecycle Order (Edited)')).toBeVisible({
-          timeout: 5_000,
-        });
-
-        await snap('07-after-edit');
-      });
-
-      // ── Step 7: Run Reflow ───────────────────────────────────────────────────
-      await test.step('run reflow and verify result banner', async () => {
-        await page.locator('.reflow-btn').click();
-
-        // Banner appears with the rescheduled count and delay
-        await expect(page.locator('.banner--success')).toBeVisible({ timeout: 8_000 });
-        await expect(page.locator('.banner--success')).toContainText(
-          'Reflow complete: 2 order(s) rescheduled',
-        );
-        await expect(page.locator('.banner--success')).toContainText('Total delay: +16h');
-
-        await snap('08-reflow-banner');
-
-        // Dismiss the banner
-        await page.locator('.banner__close-btn').click();
-        await expect(page.locator('.banner--success')).not.toBeVisible({ timeout: 3_000 });
-
-        await snap('09-banner-dismissed');
-      });
-
-      // ── Step 8: Delete the created work order ────────────────────────────────
-      await test.step('delete the work order via three-dot menu', async () => {
-        const editedBar = barByName(page, 'E2E Lifecycle Order (Edited)');
-        await editedBar.scrollIntoViewIfNeeded();
-
-        const menuBtn = editedBar.locator('.bar__menu-btn');
-        await menuBtn.click({ force: true });
-
-        await expect(page.locator('.bar__dropdown')).toBeVisible({ timeout: 3_000 });
-        await page.locator('.dropdown-item--danger').filter({ hasText: 'Delete' }).click();
-
-        // Bar should be removed from the DOM
-        await expect(
-          page.locator('.bar__name').filter({ hasText: 'E2E Lifecycle Order (Edited)' }),
-        ).not.toBeAttached({ timeout: 5_000 });
-
-        await snap('10-after-delete');
-      });
-
-      // ── Step 9: Verify baseline orders still intact ─────────────────────────
-      await test.step('verify baseline orders are unaffected', async () => {
-        await expect(barByName(page, 'Open Order Alpha')).toBeAttached();
-        await expect(barByName(page, 'In-Progress Batch')).toBeAttached();
-        await expect(barByName(page, 'Blocked Job')).toBeAttached();
-
-        await snap('11-final-state');
-      });
-    },
-  );
+      await snap('11-final-state');
+    });
+  });
 });
 
 // ── Suite: Create panel ───────────────────────────────────────────────────────
@@ -481,9 +480,11 @@ test.describe('Create panel', () => {
   test('shows error when name is empty and submit is clicked', async ({ page }) => {
     await setupMock(page);
 
-    await wcRow(page, 'Packaging Line').locator('.grid-area').click({
-      position: { x: 600, y: 28 },
-    });
+    await wcRow(page, 'Packaging Line')
+      .locator('.grid-area')
+      .click({
+        position: { x: 600, y: 28 },
+      });
     await expect(page.locator('.panel')).toBeVisible({ timeout: 5_000 });
 
     // Clear the name field (it starts empty) and submit without filling it
@@ -500,9 +501,11 @@ test.describe('Create panel', () => {
   test('shows end-before-start error when end date precedes start', async ({ page }) => {
     await setupMock(page);
 
-    await wcRow(page, 'Packaging Line').locator('.grid-area').click({
-      position: { x: 600, y: 28 },
-    });
+    await wcRow(page, 'Packaging Line')
+      .locator('.grid-area')
+      .click({
+        position: { x: 600, y: 28 },
+      });
     await expect(page.locator('.panel')).toBeVisible({ timeout: 5_000 });
 
     // Inject an end-before-start date pair via the Angular component API
@@ -537,9 +540,11 @@ test.describe('Create panel', () => {
     await setupMock(page);
 
     // Click on Extrusion Line A — has wo-open-1 from today+5 to today+35
-    await wcRow(page, 'Extrusion Line A').locator('.grid-area').click({
-      position: { x: 400, y: 28 },
-    });
+    await wcRow(page, 'Extrusion Line A')
+      .locator('.grid-area')
+      .click({
+        position: { x: 400, y: 28 },
+      });
     await expect(page.locator('.panel')).toBeVisible({ timeout: 5_000 });
     await page.fill('#wo-name', 'Conflicting Order');
 
@@ -572,24 +577,30 @@ test.describe('Create panel', () => {
   test('cancel button closes panel without saving', async ({ page }) => {
     await setupMock(page, { orders: [] });
 
-    await wcRow(page, 'Packaging Line').locator('.grid-area').click({
-      position: { x: 600, y: 28 },
-    });
+    await wcRow(page, 'Packaging Line')
+      .locator('.grid-area')
+      .click({
+        position: { x: 600, y: 28 },
+      });
     await expect(page.locator('.panel')).toBeVisible({ timeout: 5_000 });
     await page.fill('#wo-name', 'Cancelled Order');
 
     await page.locator('.btn--ghost').click();
 
     await expect(page.locator('.panel')).not.toBeVisible({ timeout: 3_000 });
-    await expect(page.locator('.bar__name').filter({ hasText: 'Cancelled Order' })).not.toBeAttached();
+    await expect(
+      page.locator('.bar__name').filter({ hasText: 'Cancelled Order' }),
+    ).not.toBeAttached();
   });
 
   test('backdrop click closes panel', async ({ page }) => {
     await setupMock(page);
 
-    await wcRow(page, 'Packaging Line').locator('.grid-area').click({
-      position: { x: 600, y: 28 },
-    });
+    await wcRow(page, 'Packaging Line')
+      .locator('.grid-area')
+      .click({
+        position: { x: 600, y: 28 },
+      });
     await expect(page.locator('.panel')).toBeVisible({ timeout: 5_000 });
 
     await page.locator('.panel-backdrop').click();
@@ -599,9 +610,11 @@ test.describe('Create panel', () => {
   test('Escape key closes panel', async ({ page }) => {
     await setupMock(page);
 
-    await wcRow(page, 'Packaging Line').locator('.grid-area').click({
-      position: { x: 600, y: 28 },
-    });
+    await wcRow(page, 'Packaging Line')
+      .locator('.grid-area')
+      .click({
+        position: { x: 600, y: 28 },
+      });
     await expect(page.locator('.panel')).toBeVisible({ timeout: 5_000 });
 
     await page.keyboard.press('Escape');
@@ -612,9 +625,11 @@ test.describe('Create panel', () => {
   test('start date input is pre-filled from click position', async ({ page }) => {
     await setupMock(page);
 
-    await wcRow(page, 'Packaging Line').locator('.grid-area').click({
-      position: { x: 600, y: 28 },
-    });
+    await wcRow(page, 'Packaging Line')
+      .locator('.grid-area')
+      .click({
+        position: { x: 600, y: 28 },
+      });
     await expect(page.locator('.panel')).toBeVisible({ timeout: 5_000 });
 
     const startValue = await page.locator('#wo-start-dt').inputValue();
@@ -624,9 +639,11 @@ test.describe('Create panel', () => {
   test('datetime picker popover shows calendar and time selects', async ({ page }) => {
     await setupMock(page);
 
-    await wcRow(page, 'Packaging Line').locator('.grid-area').click({
-      position: { x: 600, y: 28 },
-    });
+    await wcRow(page, 'Packaging Line')
+      .locator('.grid-area')
+      .click({
+        position: { x: 600, y: 28 },
+      });
     await expect(page.locator('.panel')).toBeVisible({ timeout: 5_000 });
 
     await page.locator('#wo-start-dt').click();
@@ -872,7 +889,12 @@ test.describe('Run Reflow', () => {
           // Hold for 1 s so we can assert the in-flight loading text
           await new Promise(r => setTimeout(r, 1_000));
           return new Response(
-            JSON.stringify({ changes: [], explanation: 'No changes.', updatedCount: 0, totalDelayMinutes: 0 }),
+            JSON.stringify({
+              changes: [],
+              explanation: 'No changes.',
+              updatedCount: 0,
+              totalDelayMinutes: 0,
+            }),
             { status: 200, headers: { 'Content-Type': 'application/json' } },
           );
         }
@@ -1013,7 +1035,9 @@ test.describe('Drag-to-reschedule', () => {
   test('drag into overlapping range shows error banner and leaves bar position unchanged', async ({
     page,
   }, testInfo) => {
-    // Two orders on the same work center — dragging A far right overlaps B
+    // Two 30-day orders on the same work center — both render as 'md' bars (150 px at
+    // 5 px/day) so the pointer-down starts well clear of the three-dot menu button.
+    // Dragging A right by 50 px (= 10 days) moves its end to today+42, overlapping B.
     const dragOrders = [
       {
         docId: 'wo-drag-a',
@@ -1023,7 +1047,7 @@ test.describe('Drag-to-reschedule', () => {
           workCenterId: 'wc-extrusion-a',
           status: 'open',
           startDate: iso(daysFrom(2)),
-          endDate: iso(daysFrom(8)),
+          endDate: iso(daysFrom(32)),
         },
       },
       {
@@ -1033,8 +1057,8 @@ test.describe('Drag-to-reschedule', () => {
           name: 'Fixed Target',
           workCenterId: 'wc-extrusion-a',
           status: 'open',
-          startDate: iso(daysFrom(15)),
-          endDate: iso(daysFrom(45)),
+          startDate: iso(daysFrom(38)),
+          endDate: iso(daysFrom(68)),
         },
       },
     ];
@@ -1049,10 +1073,10 @@ test.describe('Drag-to-reschedule', () => {
     const box = await bar.boundingBox();
     expect(box).not.toBeNull();
 
-    // Drag 70px right = 14 days → new start today+16, overlaps Fixed Target (today+15)
-    await page.mouse.move(box!.x + 20, box!.y + 20);
+    // Drag 50 px right = 10 days → new end today+42, overlaps Fixed Target (today+38)
+    await page.mouse.move(box!.x + 30, box!.y + 20);
     await page.mouse.down();
-    await page.mouse.move(box!.x + 90, box!.y + 20, { steps: 15 });
+    await page.mouse.move(box!.x + 80, box!.y + 20, { steps: 15 });
     await page.mouse.up();
 
     // Error banner should appear
