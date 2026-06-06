@@ -123,6 +123,7 @@ make docker-down  # stop containers
 - **Edit panel** – same slide-out panel reused in edit mode; form pre-populated with existing data
 - **Date + time picker** – a single readonly input that opens an `ngb-datepicker` + hour/minute selects inside an `NgbPopover` (`DatetimePickerComponent`)
 - **Overlap detection** – client-side guard blocks save if dates conflict on the same work center
+- **Drag-to-reschedule** – drag any bar horizontally to a new date; snaps to the nearest day; overlap check blocks conflicting placements with an inline error
 - **Today indicator** – vertical blue line; "Today" button re-centres the viewport
 - **Real-time sync** – Server-Sent Events stream; timeline updates live across browser tabs
 - **Run Reflow** – one-click button triggers the backend algorithm; result shown in a dismissible banner

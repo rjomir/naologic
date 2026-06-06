@@ -407,8 +407,8 @@ export class TimelineComponent implements AfterViewInit {
     const snappedDeltaMs = Math.round(deltaMs / MS_PER_DAY) * MS_PER_DAY;
     const newStartMs = origStartMs + snappedDeltaMs;
     const newEndMs = newStartMs + durationMs;
-    const newStart = new Date(newStartMs).toISOString();
-    const newEnd = new Date(newEndMs).toISOString();
+    const newStart = new Date(newStartMs).toISOString().slice(0, 19);
+    const newEnd = new Date(newEndMs).toISOString().slice(0, 19);
     const overlap = this.woService.checkOverlap(newStart, newEnd, wo.data.workCenterId, wo.docId);
     if (overlap) {
       this.reflowResult.set(`Cannot reschedule: ${overlap}`);

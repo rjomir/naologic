@@ -87,12 +87,16 @@ pnpm test:e2e --ui     # open Playwright UI mode
 
 **Covered scenarios:**
 
-| Spec file              | Scenarios                                                                        |
-| ---------------------- | -------------------------------------------------------------------------------- |
-| `timeline.spec.ts`     | Work center rendering, bar presence, create/edit/delete flow, zoom, today button |
-|                        | Panel close (backdrop / Cancel / Escape), datetime picker popover, row hover     |
-|                        | Overlap detection, infinite scroll (left + right edge)                           |
-| `error-states.spec.ts` | API error banner on load, reflow success/failure banners, banner dismiss         |
+| Spec file              | Scenarios                                                                         |
+| ---------------------- | --------------------------------------------------------------------------------- |
+| `happy-flow.spec.ts`   | Full lifecycle (create → edit → reflow → delete), status badges, tooltip          |
+|                        | Create/edit panel validation, overlap detection, zoom levels, today button        |
+|                        | Reflow banners, loading state, infinite scroll                                    |
+|                        | **Drag-to-reschedule**: drag right/left, overlap error banner, sub-threshold noop |
+| `timeline.spec.ts`     | Work center rendering, bar presence, create/edit/delete flow, zoom, today button  |
+|                        | Panel close (backdrop / Cancel / Escape), datetime picker popover, row hover      |
+|                        | Overlap detection, infinite scroll (left + right edge)                            |
+| `error-states.spec.ts` | API error banner on load, reflow success/failure banners, banner dismiss          |
 
 API calls are intercepted by patching `window.fetch` before Angular bootstraps — no real backend required.
 
