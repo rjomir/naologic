@@ -944,3 +944,156 @@ test.describe('Infinite scroll', () => {
     expect(after).toBeGreaterThan(before);
   });
 });
+
+// ── Suite: Drag-to-reschedule ─────────────────────────────────────────────────
+
+test.describe('Drag-to-reschedule', () => {
+  /**
+   * Drags an md bar (≥130px) right by 50px (= 10 days at month zoom 5px/day),
+   * then checks the bar's aria-label updated to new dates.
+   */
+  test('dragging a bar right updates its start and end dates', async ({ page }, testInfo) => {
+    await setupMock(page);
+
+    // Open Order Alpha: today+5 → today+35 (30 days, md bar at month zoom)
+    const bar = barByName(page, 'Open Order Alpha');
+    await bar.scrollIntoViewIfNeeded();
+    await expect(bar).toBeVisible();
+
+    const origStart = iso(daysFrom(5));
+    const box = await bar.boundingBox();
+    expect(box).not.toBeNull();
+
+    // Drag 50px right (= 10 days at 5px/day)
+    await page.mouse.move(box!.x + 30, box!.y + 20);
+    await page.mouse.down();
+    await page.mouse.move(box!.x + 80, box!.y + 20, { steps: 10 });
+    await page.mouse.up();
+
+    // aria-label contains startDate — wait for it to change from the original
+    await expect(bar).not.toHaveAttribute('aria-label', new RegExp(origStart), {
+      timeout: 5_000,
+    });
+
+    await testInfo.attach('drag-right-result', {
+      body: await page.screenshot({ fullPage: false }),
+      contentType: 'image/png',
+    });
+  });
+
+  /**
+   * Drags a bar left by 25px (= 5 days) and verifies the start date moved earlier.
+   */
+  test('dragging a bar left updates its dates to an earlier range', async ({ page }) => {
+    await setupMock(page);
+
+    const bar = barByName(page, 'Open Order Alpha');
+    await bar.scrollIntoViewIfNeeded();
+    await expect(bar).toBeVisible();
+
+    const origStart = iso(daysFrom(5));
+    const box = await bar.boundingBox();
+    expect(box).not.toBeNull();
+
+    // Drag 25px left (= 5 days earlier)
+    await page.mouse.move(box!.x + 80, box!.y + 20);
+    await page.mouse.down();
+    await page.mouse.move(box!.x + 55, box!.y + 20, { steps: 10 });
+    await page.mouse.up();
+
+    await expect(bar).not.toHaveAttribute('aria-label', new RegExp(origStart), {
+      timeout: 5_000,
+    });
+  });
+
+  /**
+   * Dragging onto an overlapping date shows an error banner and
+   * leaves the bar's aria-label unchanged (no PUT was issued).
+   */
+  test('drag into overlapping range shows error banner and leaves bar position unchanged', async ({
+    page,
+  }, testInfo) => {
+    // Two orders on the same work center — dragging A far right overlaps B
+    const dragOrders = [
+      {
+        docId: 'wo-drag-a',
+        docType: 'workOrder',
+        data: {
+          name: 'Drag Source',
+          workCenterId: 'wc-extrusion-a',
+          status: 'open',
+          startDate: iso(daysFrom(2)),
+          endDate: iso(daysFrom(8)),
+        },
+      },
+      {
+        docId: 'wo-drag-b',
+        docType: 'workOrder',
+        data: {
+          name: 'Fixed Target',
+          workCenterId: 'wc-extrusion-a',
+          status: 'open',
+          startDate: iso(daysFrom(15)),
+          endDate: iso(daysFrom(45)),
+        },
+      },
+    ];
+
+    await setupMock(page, { orders: dragOrders });
+
+    const bar = barByName(page, 'Drag Source');
+    await bar.scrollIntoViewIfNeeded();
+    await expect(bar).toBeVisible();
+
+    const origStart = iso(daysFrom(2));
+    const box = await bar.boundingBox();
+    expect(box).not.toBeNull();
+
+    // Drag 70px right = 14 days → new start today+16, overlaps Fixed Target (today+15)
+    await page.mouse.move(box!.x + 20, box!.y + 20);
+    await page.mouse.down();
+    await page.mouse.move(box!.x + 90, box!.y + 20, { steps: 15 });
+    await page.mouse.up();
+
+    // Error banner should appear
+    await expect(page.locator('.banner--success')).toBeVisible({ timeout: 3_000 });
+    await expect(page.locator('.banner--success')).toContainText('Cannot reschedule');
+    await expect(page.locator('.banner--success')).toContainText('Fixed Target');
+
+    // Brief pause to confirm bar label is not updated (no PUT was issued)
+    await page.waitForTimeout(300);
+    const currentLabel = await bar.getAttribute('aria-label');
+    expect(currentLabel).toContain(origStart);
+
+    await testInfo.attach('drag-overlap-error', {
+      body: await page.screenshot({ fullPage: false }),
+      contentType: 'image/png',
+    });
+  });
+
+  /**
+   * A tiny movement (≤5px threshold) is treated as a click, not a drag —
+   * the bar's aria-label stays the same.
+   */
+  test('sub-threshold movement is not treated as a drag', async ({ page }) => {
+    await setupMock(page);
+
+    const bar = barByName(page, 'Open Order Alpha');
+    await bar.scrollIntoViewIfNeeded();
+    await expect(bar).toBeVisible();
+
+    const origLabel = await bar.getAttribute('aria-label');
+    const box = await bar.boundingBox();
+    expect(box).not.toBeNull();
+
+    // Move only 3px — below the 5px threshold
+    await page.mouse.move(box!.x + 50, box!.y + 20);
+    await page.mouse.down();
+    await page.mouse.move(box!.x + 53, box!.y + 20, { steps: 3 });
+    await page.mouse.up();
+
+    await page.waitForTimeout(300);
+    const labelAfter = await bar.getAttribute('aria-label');
+    expect(labelAfter).toBe(origLabel);
+  });
+});

@@ -61,6 +61,11 @@ export class TimelineComponent implements AfterViewInit {
   ghostBarX = signal(-1);
 
   onGridMouseMove(event: MouseEvent): void {
+    if (event.buttons === 1) {
+      this.showClickTooltip.set(false);
+      this.ghostBarX.set(-1);
+      return;
+    }
     if ((event.target as HTMLElement).closest('app-work-order-bar')) {
       this.showClickTooltip.set(false);
       this.ghostBarX.set(-1);
@@ -389,6 +394,37 @@ export class TimelineComponent implements AfterViewInit {
     if (d > 0) return h > 0 ? `${d}d ${h}h` : `${d}d`;
     if (h > 0) return m > 0 ? `${h}h ${m}min` : `${h}h`;
     return `${m}min`;
+  }
+
+  async onReschedule(event: { docId: string; deltaX: number }): Promise<void> {
+    const wo = this.workOrders().find(o => o.docId === event.docId);
+    if (!wo) return;
+    const MS_PER_DAY = 86_400_000;
+    const deltaMs = (event.deltaX / this.pixelsPerDay()) * MS_PER_DAY;
+    const origStartMs = new Date(wo.data.startDate).getTime();
+    const durationMs = new Date(wo.data.endDate).getTime() - origStartMs;
+    // Snap movement to the nearest whole day
+    const snappedDeltaMs = Math.round(deltaMs / MS_PER_DAY) * MS_PER_DAY;
+    const newStartMs = origStartMs + snappedDeltaMs;
+    const newEndMs = newStartMs + durationMs;
+    const newStart = new Date(newStartMs).toISOString();
+    const newEnd = new Date(newEndMs).toISOString();
+    const overlap = this.woService.checkOverlap(newStart, newEnd, wo.data.workCenterId, wo.docId);
+    if (overlap) {
+      this.reflowResult.set(`Cannot reschedule: ${overlap}`);
+      setTimeout(() => this.reflowResult.set(null), 3000);
+      return;
+    }
+    try {
+      await this.woService.update(event.docId, {
+        startDate: newStart,
+        endDate: newEnd,
+        durationMinutes: wo.data.durationMinutes,
+      });
+    } catch {
+      this.reflowResult.set('Reschedule failed. Check server logs.');
+      setTimeout(() => this.reflowResult.set(null), 3000);
+    }
   }
 
   goToToday(): void {
