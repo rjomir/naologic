@@ -12,13 +12,14 @@ COPY backend/package.json  ./backend/
 COPY frontend/package.json ./frontend/
 COPY shared/package.json   ./shared/
 
-# Full workspace install — creates node_modules for every workspace,
-# which is required so workspace-local .bin symlinks resolve correctly
-RUN pnpm install --frozen-lockfile
-
-# Generate Prisma client before source arrives (separate cache layer)
+# Prisma schema must be present before install so the postinstall
+# `prisma generate` hook can find it
 COPY backend/prisma ./backend/prisma
-RUN pnpm --filter production-reflow db:generate
+
+# Full workspace install — creates node_modules for every workspace,
+# which is required so workspace-local .bin symlinks resolve correctly.
+# The backend postinstall runs `prisma generate` using the schema above.
+RUN pnpm install --frozen-lockfile
 
 # Copy source for backend and the shared package it imports at runtime
 COPY backend/. ./backend/

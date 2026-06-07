@@ -13,8 +13,10 @@ COPY frontend/package.json ./frontend/
 COPY shared/package.json   ./shared/
 
 # Full workspace install — creates node_modules for every workspace,
-# which is required so workspace-local .bin symlinks resolve correctly
-RUN pnpm install --frozen-lockfile
+# which is required so workspace-local .bin symlinks resolve correctly.
+# --ignore-scripts skips backend's postinstall (prisma generate) which
+# requires schema files not present in this image.
+RUN pnpm install --frozen-lockfile --ignore-scripts
 
 # Copy source for frontend and the shared package it imports at runtime
 COPY frontend/. ./frontend/
